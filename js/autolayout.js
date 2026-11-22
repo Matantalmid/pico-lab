@@ -111,6 +111,70 @@
     },
     /* a transistor switching a 5 V load (npn) or a motor with its protection diode (diode).
        E B C in columns x+5..x+7; the base resistor runs left to the Pico wire; the load sits above the board. */
+    /* ---- the parts of data-components-7.js ---- */
+    ntc: { mod: ['GND', 'VCC', 'OUT'], con: { GND: 'gnd', VCC: '3v3', OUT: 0 } },
+    bmp180: { mod: ['VIN', 'GND', 'SCL', 'SDA'], con: { VIN: '3v3', GND: 'gnd', SCL: 1, SDA: 0 } },
+    lcd2004: { off: 'top', pins: ['GND', 'VCC', 'SDA', 'SCL'], con: { GND: 'gnd', VCC: '5v', SDA: 0, SCL: 1 } },
+    ili9341: { off: 'top', pins: ['VCC', 'GND', 'CS', 'RST', 'DC', 'MOSI', 'SCK', 'LED'], con: { VCC: '3v3', GND: 'gnd', SCK: 0, MOSI: 1, CS: 2, DC: 3, RST: 4, LED: '3v3' } },
+    /* the 74HC165 beside an 8-way DIP switch: each switch from the plus rail to one input, a 10k from each input to ground */
+    hc165: {
+      width: 20,
+      place: function (c) {
+        var D = c.x + 1, C = c.x + 11, id = c.id, sw = id + 'sw';
+        var dip = [], k;
+        for (k = 1; k <= 8; k++) dip.push(k + 'b');
+        for (k = 8; k >= 1; k--) dip.push(k + 'a');
+        c.add({ t: 'chip', look: 'dip', id: sw, col: D, board: c.b, label: 'DIP', pins: dip });
+        c.add({ t: 'chip', id: id, col: C, board: c.b, label: '74HC165', pins: ['PL', 'CP', 'D4', 'D5', 'D6', 'D7', 'Q7N', 'GND', 'Q7', 'DS', 'D0', 'D1', 'D2', 'D3', 'CE', 'VCC'] });
+        for (k = 0; k < 8; k++) {
+          c.pwr('3v3', c.R('j', D + k));
+          c.add(w(c.R('d', D + k), k < 4 ? c.R('h', C + 5 - k) : c.R('d', C + 2 + (k - 4)), 'orange'));
+          c.add({ t: 'res', a: c.R('a', D + k), b: (c.b > 1 ? c.b + ':' : '') + 'bn', val: '10k' });
+        }
+        c.pwr('3v3', c.R('j', C)); c.pwr('gnd', c.R('j', C + 1), 'top'); c.pwr('gnd', c.R('j', C + 6), 'top'); c.pwr('gnd', c.R('a', C + 7), 'bottom');
+        c.sig(0, c.R('a', C)); c.sig(1, c.R('a', C + 1)); c.sig(2, c.R('j', C + 7));
+        c.expect(id + '.PL', 0); c.expect(id + '.CP', 1); c.expect(id + '.Q7', 2);
+        c.expect(id + '.VCC', '3V3'); c.expect([id + '.GND', id + '.CE', id + '.DS'], 'GND');
+      }
+    },
+    /* a 10-segment LED bar: anodes straight to the pins, a 330 from each cathode up into the ground rail; and the potentiometer */
+    ledbar: {
+      width: 17,
+      place: function (c) {
+        var D = c.x + 1, id = c.id, pid = id + 'p', Pc = D + 12, pins = [], i;
+        for (i = 1; i <= 10; i++) pins.push('A' + i);
+        for (i = 10; i >= 1; i--) pins.push('C' + i);
+        c.add({ t: 'chip', look: 'bar', id: id, col: D, board: c.b, label: 'BAR', pins: pins });
+        for (i = 0; i < 10; i++) {
+          c.add({ t: 'res', a: c.R('j', D + i), b: (c.b > 1 ? c.b + ':' : '') + 'tn', val: '330' });
+          c.sig(i, c.R('a', D + i));
+        }
+        c.add({ t: 'pot', at: c.R('f', Pc), id: pid });
+        c.pwr('3v3', c.R('j', Pc)); c.sig(10, c.R('j', Pc + 1)); c.pwr('gnd', c.R('j', Pc + 2), 'top');
+        for (i = 0; i < 10; i++) c.expect(id + '.A' + (i + 1), i);
+        var cs = []; for (i = 1; i <= 10; i++) cs.push(id + '.C' + i + '~');
+        c.expect(cs, 'GND');
+        c.expect(pid + '.2', 10); c.expect(pid + '.1', '3V3'); c.expect(pid + '.3', 'GND');
+      }
+    },
+    /* the A4988 across the channel, the stepper motor and its 12 V supply above the board */
+    a4988: {
+      width: 19,
+      place: function (c) {
+        var D = c.x + 1, id = c.id, mot = id + 'M', sup = id + 'S';
+        c.add({ t: 'chip', look: 'board', id: id, col: D, board: c.b, label: 'A4988', pins: ['EN', 'MS1', 'MS2', 'MS3', 'RST', 'SLP', 'STEP', 'DIR', 'VMOT', 'GND', '2B', '2A', '1A', '1B', 'VDD', 'GND'] });
+        c.add(w(c.R('b', D + 4), c.R('b', D + 5), 'white'));
+        c.sig(0, c.R('a', D + 6)); c.sig(1, c.R('a', D + 7));
+        c.pwr('3v3', c.R('j', D + 1)); c.pwr('gnd', c.R('j', D), 'top');
+        c.add({ t: 'off', kind: 'ext-stepmotor', id: mot, x: D + 4, pins: ['1B', '1A', '2A', '2B'], board: c.b, label: L('מנוע צעדים', 'Stepper motor') });
+        c.add({ t: 'off', kind: 'ext-supply', id: sup, x: D + 13, pins: ['+', '−'], board: c.b, label: L('ספק 12V', '12 V supply') });
+        c.add(w(c.R('j', D + 2), mot + '.1B', 'blue')); c.add(w(c.R('j', D + 3), mot + '.1A', 'blue'));
+        c.add(w(c.R('j', D + 4), mot + '.2A', 'purple')); c.add(w(c.R('j', D + 5), mot + '.2B', 'purple'));
+        c.add(w(sup + '.+', c.R('j', D + 7), 'red')); c.add(w(sup + '.−', (c.b > 1 ? c.b + ':' : '') + 'tn' + (D + 15), 'black'));
+        c.expect(id + '.STEP', 0); c.expect(id + '.DIR', 1); c.expect(id + '.VDD', '3V3'); c.expect(id + '.GND', 'GND');
+      }
+    },
+
     npn: { width: 13, place: function (c) { transistor(c, false); } },
     diode: { width: 14, place: function (c) { transistor(c, true); } },
 

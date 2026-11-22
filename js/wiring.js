@@ -42,6 +42,10 @@
     chip: { he: ': נעצו את השבב מעל התעלה, כשהחריץ פונה שמאלה. הרגליים נכנסות לטורים', en: ': push the chip in across the channel, notch to the left, legs in columns' },
     chipLeg1: { he: 'רגל 1 נמצאת ב-', en: 'Leg 1 goes in ' },
     seg7: { he: ': נעצו את הספרה מעל התעלה, כשהנקודה למטה. הרגליים נכנסות לטורים', en: ': push the digit in across the channel, dot at the bottom, legs in columns' },
+    across: { he: ': נעצו אותו מעל התעלה. הרגליים נכנסות לטורים', en: ': push it in across the channel, legs in columns' },
+    bar: { he: 'הרגליים של האנודות (A1 עד A10) בשורה התחתונה.', en: 'The anode legs (A1 to A10) go in the bottom row.' },
+    dip: { he: 'המילה ON למעלה, ומתג 1 משמאל.', en: 'ON at the top, and switch 1 on the left.' },
+    board: { he: 'הפוטנציומטר הקטן בצד ימין, והפינים STEP ו-DIR בשורה התחתונה.', en: 'The small trimmer on the right, and the STEP and DIR pins in the bottom row.' },
     shortRail: { he: 'רגל קצרה ישר ל', en: 'short leg straight into ' },
     flat: { he: ', הצד השטוח פונה אליכם: ', en: ', flat side facing you: ' },
     diode: { he: 'דיודה: האנודה ב-', en: 'Diode: the anode in ' }, diodeK: { he: ', והקתודה (הצד עם הפס) ב-', en: ', the cathode (the banded end) in ' },
@@ -141,7 +145,7 @@
         it.a = H(p.a, id); it.k = /^(?:\d+:)?(tp|tn|bp|bn)\d*$/.test(p.k) ? endpoint(p.k, id) : H(p.k, id);
         pinNode[id + '.a'] = it.a.node; pinNode[id + '.k'] = it.k.node;
       } else if (p.t === 'res' || p.t === 'ldr') {
-        it.a = H(p.a, id); it.b = H(p.b, id);
+        it.a = H(p.a, id); it.b = p.t === 'res' && /^(?:\d+:)?(tp|tn|bp|bn)\d*$/.test(p.b) ? endpoint(p.b, id, colOf(strip(p.a).replace(/^[a-j]/, 'a'))) : H(p.b, id);
         pinNode[id + '.a'] = it.a.node; pinNode[id + '.b'] = it.b.node;
         if (p.t === 'res') resistors.push([it.a.node, it.b.node, id]);
       } else if (p.t === 'diode') {
@@ -321,6 +325,11 @@
       }
       s = '<path d="' + d + '" class="wv-wire-o"/><path d="' + d + '" class="wv-wire" style="stroke:' + col + '"/>' +
         '<circle cx="' + a.x + '" cy="' + a.y + '" r="3.2" class="wv-end"/><circle cx="' + b.x + '" cy="' + b.y + '" r="3.2" class="wv-end"/>';
+    } else if (it.t === 'res' && it.b.kind === 'rail') {
+      /* standing upright from a hole into a rail */
+      var rx0 = it.a.x, ry1 = it.a.y, ry2 = it.b.y, rmy = (ry1 + ry2) / 2, vb = BANDS[p.val] || BANDS['330'];
+      s = legLine(rx0, ry1, it.b.x, ry2) + '<rect x="' + (rx0 - 4) + '" y="' + (rmy - 9) + '" width="8" height="18" rx="3" class="wv-res"/>' +
+        vb.map(function (c, i) { return '<rect x="' + (rx0 - 4) + '" y="' + (rmy - 6 + i * 4) + '" width="8" height="2.2" style="fill:' + c + '"/>'; }).join('');
     } else if (it.t === 'res') {
       var mx = (it.a.x + it.b.x) / 2, y = it.a.y, bands = BANDS[p.val] || BANDS['330'];
       s = legLine(it.a.x, y, it.b.x, y) + '<rect x="' + (mx - 15) + '" y="' + (y - 5) + '" width="30" height="10" rx="4" class="wv-res"/>' +
@@ -377,6 +386,29 @@
         it.legs.map(function (l, k) {
           return '<text x="' + l.x + '" y="' + (k < sh ? sye + 7.5 : syf - 3.5) + '" text-anchor="middle" style="font:700 5.3px var(--mono);fill:#2f3a40">' + esc(p.pins[k]) + '</text>';
         }).join('');
+    } else if (it.t === 'chip' && (p.look === 'bar' || p.look === 'dip' || p.look === 'board')) {
+      /* other parts that sit across the channel: an LED bar, a DIP switch, a small driver board (A4988) */
+      var gh = it.legs.length / 2, gx1 = it.legs[0].x, gx2 = it.legs[gh - 1].x, gye = it.legs[0].y, gyf = it.legs[gh].y;
+      var gcy = (gye + gyf) / 2, glab = 'font:700 5.3px var(--mono);fill:#2f3a40', gy0 = gyf - 8, gh2 = gye - gyf + 16, inner = '';
+      var gfill = p.look === 'bar' ? '#2b3034' : p.look === 'dip' ? '#c8322f' : '#2a6b45';
+      if (p.look === 'bar') {
+        it.legs.slice(0, gh).forEach(function (l) { inner += '<rect x="' + (l.x - 3.5) + '" y="' + (gy0 + 5) + '" width="7" height="' + (gh2 - 10) + '" rx="1" style="fill:#3fb950;opacity:.85"/>'; });
+      } else if (p.look === 'dip') {
+        it.legs.slice(0, gh).forEach(function (l, k) {
+          inner += '<rect x="' + (l.x - 3.5) + '" y="' + (gy0 + 5) + '" width="7" height="' + (gh2 - 10) + '" rx="1" style="fill:#f4f4f4"/>' +
+            '<rect x="' + (l.x - 3) + '" y="' + (gcy) + '" width="6" height="' + (gh2 / 2 - 6) + '" rx="1" style="fill:#596168"/>';
+        });
+        inner += '<text x="' + (gx1 - 5) + '" y="' + (gy0 + 7) + '" text-anchor="middle" style="font:700 5px var(--mono);fill:#fff">ON</text>';
+      } else {
+        inner = '<rect x="' + ((gx1 + gx2) / 2 - 9) + '" y="' + (gcy - 9) + '" width="18" height="18" rx="1.5" style="fill:#1b1f22"/>' +
+          '<circle cx="' + (gx2 - 2) + '" cy="' + (gcy) + '" r="4.5" style="fill:#d9b44a;stroke:#8a6d1d"/>' +
+          '<text x="' + ((gx1 + gx2) / 2) + '" y="' + (gcy + 1.6) + '" text-anchor="middle" style="font:700 4.5px var(--mono);fill:#e8edf0">' + esc(p.label || '') + '</text>';
+      }
+      s = '<rect x="' + (gx1 - 8) + '" y="' + gy0 + '" width="' + (gx2 - gx1 + 16) + '" height="' + gh2 + '" rx="2.5" style="fill:' + gfill + ';stroke:rgba(0,0,0,.4)"/>' + inner +
+        (p.look !== 'board' ? '' : it.legs.map(function (l, k) {
+          return '<text x="' + l.x + '" y="' + (k < gh ? gye + 6 : gyf - 1) + '" text-anchor="middle" style="font:700 4.6px var(--mono);fill:#e8edf0">' + esc(p.pins[k]) + '</text>';
+        }).join(''));
+      void glab;
     } else if (it.t === 'chip') {
       /* silver legs from the holes to the body, the body over the channel, pin names beside the legs */
       var hf = it.legs.length / 2, lx = it.legs[0].x, rx2 = it.legs[hf - 1].x, ye = it.legs[0].y, yf = it.legs[hf].y;
@@ -462,7 +494,7 @@
   function caption(it) {
     var p = it.p;
     if (it.t === 'wire') return T(W.wire) + ' ' + T((COLORS[p.c] || COLORS.blue)[1]) + ': ' + T(W.from) + where(it.a) + T(W.to) + where(it.b) + '.';
-    if (it.t === 'res') return T(W.res) + ' ' + p.val + 'Ω' + T(W.between) + code(it.a.ref) + T(W.and) + code(it.b.ref) + '.';
+    if (it.t === 'res') return T(W.res) + ' ' + p.val + 'Ω' + T(W.between) + code(it.a.ref) + T(W.and) + (it.b.kind === 'rail' ? where(it.b) : code(it.b.ref)) + '.';
     if (it.t === 'led') return T(W.led) + ': ' + T(W.long) + code(it.a.ref) + ', ' + (it.k.kind === 'rail' ? T(W.shortRail) + where(it.k) : T(W.short) + code(it.k.ref)) + '.';
     if (it.t === 'ldr') return T(W.ldr) + code(it.a.ref) + T(W.other) + code(it.b.ref) + '.';
     if (it.t === 'diode') return T(W.diode) + code(it.a.ref) + T(W.diodeK) + code(it.k.ref) + '.';
@@ -470,6 +502,7 @@
     if (it.t === 'button') return T(W.button) + ' ' + p.col + ' / ' + (p.col + 2) + '.';
     if (it.t === 'pot') return T(W.pot) + it.legs.map(function (l) { return code(l.ref); }).join(', ') + '.';
     if (it.t === 'ds') return (p.label ? esc(p.label) + T(W.flat) : T(W.ds)) + it.legs.map(function (l, k) { return code(it.names[k]) + ' ' + code(l.ref); }).join(', ') + '.';
+    if (it.t === 'chip' && /^(bar|dip|board)$/.test(p.look || '')) return esc(p.label || 'IC') + T(W.across) + ' ' + it.legs[0].col + ' ' + T(W.upto) + ' ' + it.legs[it.legs.length / 2 - 1].col + '. ' + T(W[p.look]);
     if (it.t === 'chip') return esc(p.label || 'IC') + T(p.look === 'seg7' ? W.seg7 : W.chip) + ' ' + it.legs[0].col + ' ' + T(W.upto) + ' ' + it.legs[it.legs.length / 2 - 1].col + '. ' + T(W.chipLeg1) + code(it.legs[0].ref) + '.';
     if (it.t === 'mod') return esc(p.label || compName(p.kind)) + T(W.mod) + ' ' + it.legs[0].col + ' ' + T(W.upto) + ' ' + it.legs[it.legs.length - 1].col + ' (' + p.pins.map(code).join(', ') + ').';
     if (it.t === 'off') return esc(p.label || compName(p.kind)) + T(p.kind === 'link' ? W.linkOff : W.off);
