@@ -192,7 +192,7 @@
       }
       if (g.type === 'profile') {
         [0, 1, 2].forEach(function (k) { arrows(k, 'move'); });
-        [1, -1].forEach(function (end) {
+        if (!g.cube) [1, -1].forEach(function (end) {
           var m = new THREE.Mesh(cubeGeo, stretchMat), pos = g.c.slice();
           pos[g.ax] += end * (g.len / 2 + 2.5); m.position.set(pos[0], pos[1], pos[2]);
           m.renderOrder = 30; m.userData.h = { k: g.ax, kind: 'stretch', end: end, o: pos };
@@ -202,7 +202,7 @@
       else if (D.SLOT[g.type]) {
         arrows(g.a, 's');
         if (g.type === 'motor') arrows(g.axis, 'prop', 'u');
-        if (g.type === 'battery' || g.type === 'control') arrows(g.t, 'prop', 'v');
+        if (g.type === 'battery' || g.type === 'control' || g.type === 'plate') arrows(g.t, 'prop', 'v');
       } else if ((g.type === 'shaft' && !g.coup) || (g.type === 'sprocket' && store.A.G[g.body].type === 'shaft')) arrows(g.axis, 's');
     }
     function applyHandle(h, delta) {                 // one step of a drag, tried on a copy of the design as it was when the drag began

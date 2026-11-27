@@ -13,15 +13,42 @@
   var R = RB.R, PITCH = RB.PITCH, BEAR_H = RB.BEAR_H, pd = RB.pd;
   var AXI = { x: 0, y: 1, z: 2 }, AXN = ['x', 'y', 'z'], EPS = 0.06, LEG = 3.6;
   var BOXES = { battery: [25, 17, 20], control: [24, 15, 12] };     // along the profile, out from the face, across
-  var MARGIN = { bearing: 6.35, motor: 5, battery: 2, control: 2, estop: 2.4 };
-  var SLOT = { bearing: 1, motor: 1, battery: 1, control: 1, estop: 1 };
-  var MOTOR_NM = 250 / (RB.MOTOR_RPM * 2 * Math.PI / 60);            // rated torque, from 250 W at 75 rpm
+  var MARGIN = { bearing: 6.35, motor: 5, battery: 2, control: 2, estop: 2.4, caster: 4, plate: 0 };
+  var SLOT = { bearing: 1, motor: 1, battery: 1, control: 1, estop: 1, caster: 1, plate: 1 };
   var KG = { profile: 0.016, bracket: 0.06, bearing: 0.7, shaft: 0.0247, wheel: 3.6, motor: 2.3, battery: 6.5, control: 1.5, estop: 0.1, coupling: 0.3, chain: 0.007, idler: 0.2, deck: 0.0006 };
+
+  /* ---------- the choices a part can come in ---------- */
+  /* profile sections: half the narrow side, half the wide side (cm), and kg per cm */
+  var SECS = { '2020': { h: [1, 1], kg: 0.005 }, '2040': { h: [1, 2], kg: 0.009 }, '4040': { h: [2, 2], kg: 0.016 }, '4080': { h: [2, 4], kg: 0.029 } };
+  /* wheels by rim size in inches: the radius follows the 12 inch wheel of the example robot */
+  var WHEELS = [8, 10, 12, 16];
+  /* swivel casters: wheel diameter in mm -> mounting height in cm */
+  var CASTERS = { 75: { h: 10.5, kg: 0.35 }, 100: { h: 13, kg: 0.5 }, 125: { h: 16, kg: 0.75 }, 200: { h: 24.5, kg: 1.6 } };
+  /* motors: speed at the output shaft, power, weight, and size compared with the MY1016Z */
+  var MOTORS = {
+    my1016: { name: B('MY1016Z, 24V, 250W, 75 סל"ד', 'MY1016Z, 24 V, 250 W, 75 rpm'), rpm: 75, w: 250, kg: 2.3, s: 1 },
+    fast: { name: B('מנוע מהיר, 24V, 250W, 150 סל"ד', 'Fast motor, 24 V, 250 W, 150 rpm'), rpm: 150, w: 250, kg: 2.3, s: 1 },
+    strong: { name: B('מנוע חזק, 24V, 500W, 90 סל"ד', 'Strong motor, 24 V, 500 W, 90 rpm'), rpm: 90, w: 500, kg: 3.8, s: 1.2 },
+    small: { name: B('מנוע קטן JGB37-520, 12V, 100 סל"ד', 'Small JGB37-520 motor, 12 V, 100 rpm'), rpm: 100, w: 5, kg: 0.2, s: 0.4 }
+  };
+  function secOf(p) { return SECS[p.sec] ? p.sec : '4040'; }
+  function motorOf(p) { return MOTORS[p.model] || MOTORS.my1016; }
+  function wheelR(p) { return R * (WHEELS.indexOf(p.d) >= 0 ? p.d : 12) / 12; }
+  /* the half sizes of a profile's box. A rectangular section stands with its wide side along `wide`
+     (by default upright, or along x when the profile itself is upright). A corner cube is a cube. */
+  function profH(p) {
+    var s = SECS[secOf(p)].h, k = AXI[p.ax], h = [s[0], s[0], s[0]];
+    if (p.cube) return h;
+    if (s[1] !== s[0]) h[p.wide && AXI[p.wide] !== k ? AXI[p.wide] : (k === 1 ? 0 : 1)] = s[1];
+    h[k] = p.len / 2;
+    return h;
+  }
 
   var NAMES = {
     profile: B('פרופיל', 'profile'), bracket: B('זווית', 'bracket'), bearing: B('מיסב', 'bearing'), shaft: B('ציר', 'shaft'),
     sprocket: B('גלגל שיניים', 'sprocket'), wheel: B('גלגל', 'wheel'), motor: B('מנוע', 'motor'), chain: B('שרשרת', 'chain'),
-    idler: B('גלגל מתיחה', 'idler'), battery: B('מצבר', 'battery'), control: B('קופסת בקרה', 'control box'), estop: B('לחצן חירום', 'emergency stop'), deck: B('משטח', 'deck'), coupling: B('מצמד', 'coupling')
+    idler: B('גלגל מתיחה', 'idler'), battery: B('מצבר', 'battery'), control: B('קופסת בקרה', 'control box'), estop: B('לחצן חירום', 'emergency stop'), deck: B('משטח', 'deck'), coupling: B('מצמד', 'coupling'),
+    plate: B('פלטה', 'plate'), caster: B('גלגל מסתובב', 'caster')
   };
   var MSG = {
     noParent: B('החלק שאליו היה מחובר החלק הזה כבר לא קיים.', 'The part this was attached to no longer exists.'),
@@ -58,7 +85,11 @@
     coupFull: B('במצמד הזה כבר יש ציר.', 'This coupling already holds a shaft.'),
     coupNoMotor: B('אין מנוע שאפשר ליישר מול הציר הזה. גררו את המצמד אל אחד המנועים.', 'No motor can be lined up with this shaft. Drag the coupling onto a motor.'),
     shaftBusy: B('הקצה הזה של הציר כבר מחובר למצמד.', 'This end of the shaft is already coupled.'),
-    rotDeck: B('המשטח תמיד נשאר אופקי, ולכן אפשר לסובב אותו רק סביב הציר האנכי.', 'A deck stays level. It only turns about the upright axis.')
+    rotDeck: B('המשטח תמיד נשאר אופקי, ולכן אפשר לסובב אותו רק סביב הציר האנכי.', 'A deck stays level. It only turns about the upright axis.'),
+    plateFace: B('על פלטה מרכיבים חלקים רק בצד החיצוני שלה, לא בצד שצמוד לפרופיל ולא בשוליים.', 'Parts mount on the outer face of a plate, not on the side against the profile or on its edges.'),
+    plateOn: B('פלטה מתחברת לפאה של פרופיל.', 'A plate mounts on the face of a profile.'),
+    casterDown: B('גלגל מסתובב מתחבר רק לפאה התחתונה של פרופיל או של פלטה.', 'A caster mounts only on the bottom face of a profile or a plate.'),
+    cubeLen: B('לקובייה יש מידה קבועה. כדי לשנות אותה, בחרו חתך אחר.', 'A corner cube has a fixed size. Choose another section to change it.')
   };
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -71,15 +102,15 @@
   /* do two solid parts share space? Round parts (shaft, sprocket, wheel) are tested as circles, not as their boxes */
   /* a corner bracket is a triangle, not a box: test the other part against the real wedge */
   function wedge(br, o, e) {
-    var c = br.c, d1 = br.d1, d2 = br.d2, t = 3 - d1.k - d2.k;
+    var c = br.c, d1 = br.d1, d2 = br.d2, t = 3 - d1.k - d2.k, lg = LEG * (br.sz || 1), th = 1.7 * (br.sz || 1);
     function lo(dd) { return Math.max(0, dd.sg > 0 ? o.box.min[dd.k] - c[dd.k] : c[dd.k] - o.box.max[dd.k]); }
-    if (!o.rad) return lo(d1) + lo(d2) < LEG - e;
+    if (!o.rad) return lo(d1) + lo(d2) < lg - e;
     var cyls = o.type === 'sprocket' ? [[o.rad, 0.36], [1.9, 1]] : [[o.rad, (o.box.max[o.axis] - o.box.min[o.axis]) / 2]], i = (o.axis + 1) % 3, j = (o.axis + 2) % 3, p = [0, 0, 0];
     for (var n = 0; n < cyls.length; n++) for (var iz = -2; iz <= 2; iz++) for (var ir = 1; ir <= 4; ir++) for (var ia = 0; ia < 32; ia++) {
       var rr = cyls[n][0] * ir / 4, an = ia * Math.PI / 16;
       p[o.axis] = o.c[o.axis] + cyls[n][1] * iz / 2; p[i] = o.c[i] + rr * Math.cos(an); p[j] = o.c[j] + rr * Math.sin(an);
       var u = (p[d1.k] - c[d1.k]) * d1.sg, v = (p[d2.k] - c[d2.k]) * d2.sg;
-      if (u > e && v > e && u + v < LEG - e && Math.abs(p[t] - c[t]) < 1.7 - e) return true;
+      if (u > e && v > e && u + v < lg - e && Math.abs(p[t] - c[t]) < th - e) return true;
     }
     return false;
   }
@@ -116,6 +147,7 @@
       if (!sg) continue;
       for (var m = 0; m < 3; m++) if (m !== k && Math.min(A.box.max[m], Bp.box.max[m]) - Math.max(A.box.min[m], Bp.box.min[m]) < 0.5) ok = false;
       if (!ok) continue;
+      if ((A.part && A.part.cube) || (Bp.part && Bp.part.cube)) return { type: 'cube', spots: [] };     // a corner cube holds whatever presses on its faces
       var aEnd = A.ax === k, bEnd = Bp.ax === k;
       if (aEnd && bEnd) return { type: 'butt', spots: [] };
       if (A.ax === Bp.ax) return { type: 'par', spots: [] };
@@ -146,40 +178,44 @@
             c[j] = sj > 0 ? Pp.box.max[j] : Pp.box.min[j];       // leg 1 lies on P's face, along i
             c[i] = si > 0 ? Q.box.max[i] : Q.box.min[i];          // leg 2 lies on Q's face, along j
             lo = Math.max(Pp.box.min[t], Q.box.min[t]); hi = Math.min(Pp.box.max[t], Q.box.max[t]);
-            if (hi - lo < 3.4 - e) return;
+            var sz = hi - lo >= 3.4 - e ? 1 : hi - lo >= 1.7 - e ? 0.5 : 0;          // a 4040 bracket, or the small 2020 one
+            if (!sz) return;
             c[t] = (lo + hi) / 2;
-            a = [c[i], c[i] + si * LEG]; b = [c[j], c[j] + sj * LEG];
+            a = [c[i], c[i] + si * LEG * sz]; b = [c[j], c[j] + sj * LEG * sz];
             if (Math.min(a[0], a[1]) < Pp.box.min[i] - e || Math.max(a[0], a[1]) > Pp.box.max[i] + e) return;
             if (Math.min(b[0], b[1]) < Q.box.min[j] - e || Math.max(b[0], b[1]) > Q.box.max[j] + e) return;
             var d1 = { k: i, sg: si }, d2 = { k: j, sg: sj }, kk = key(c, d1, d2);
             if (seen[kk]) return;
             seen[kk] = 1;
-            J.spots.push({ c: c, d1: d1, d2: d2 });
+            J.spots.push({ c: c, d1: d1, d2: d2, sz: sz });
           });
         });
       }
     });
   }
-  function room(S, m, at, dir) { return (dir > 0 ? S.box.max[m] - at : at - S.box.min[m]) >= 2 + LEG - 0.05; }
+  /* the bracket size that fits two profiles: a full one when both are 4 cm thick across the bracket, else the small one */
+  function bsz(P1, P2, t) { return Math.min(P1.box.max[t], P2.box.max[t]) - Math.max(P1.box.min[t], P2.box.min[t]) >= 3.4 - 0.05 ? 1 : 0.5; }
+  function room(S, m, at, dir, need) { return (dir > 0 ? S.box.max[m] - at : at - S.box.min[m]) >= need - 0.05; }
+  function halfOf(g, k) { return g.h ? g.h[k] : 2; }
   function endSide(E, S, k, sg) {          // the end of E sits on a side face of S, which lies on the sg side
-    var e = E.c.slice(), spots = [], m = S.ax;
+    var e = E.c.slice(), spots = [], m = S.ax, sz = bsz(E, S, 3 - m - k), half = halfOf(E, m);
     e[k] += sg * E.len / 2;
     [1, -1].forEach(function (dir) {
-      if (!room(S, m, E.c[m], dir)) return spots.push(null);
-      var c = e.slice(); c[m] += dir * 2;
-      spots.push({ c: c, d1: { k: m, sg: dir }, d2: { k: k, sg: -sg } });
+      if (!room(S, m, E.c[m], dir, half + LEG * sz)) return spots.push(null);
+      var c = e.slice(); c[m] += dir * half;
+      spots.push({ c: c, d1: { k: m, sg: dir }, d2: { k: k, sg: -sg }, sz: sz });
     });
     return { type: 'tee', spots: spots };
   }
   function cross(A, Bp, k, sg) {           // two side faces, profiles at right angles; Bp lies on the sg side of A
     var m = [0, 0, 0], spots = [];
     m[A.ax] = Bp.c[A.ax]; m[Bp.ax] = A.c[Bp.ax]; m[k] = sg > 0 ? A.box.max[k] : A.box.min[k];
-    [[Bp, -sg], [A, sg]].forEach(function (q) {
+    [[Bp, -sg, A], [A, sg, Bp]].forEach(function (q) {
       [1, -1].forEach(function (dir) {
-        var S = q[0];
-        if (!room(S, S.ax, m[S.ax], dir)) return spots.push(null);
-        var c = m.slice(); c[S.ax] += dir * 2;
-        spots.push({ c: c, d1: { k: S.ax, sg: dir }, d2: { k: k, sg: q[1] } });
+        var S = q[0], half = halfOf(q[2], S.ax), sz = bsz(A, Bp, 3 - S.ax - k);
+        if (!room(S, S.ax, m[S.ax], dir, half + LEG * sz)) return spots.push(null);
+        var c = m.slice(); c[S.ax] += dir * half;
+        spots.push({ c: c, d1: { k: S.ax, sg: dir }, d2: { k: k, sg: q[1] }, sz: sz });
       });
     });
     return { type: 'cross', spots: spots };
@@ -200,20 +236,22 @@
     }
     function good(id, type) { var g = get(id); return g && !g.bad && (!type || type.indexOf(g.type) >= 0) ? g : null; }
     function slot(p) {
-      var pg = good(p.on.id, ['profile']);
-      if (!pg) return null;
+      var pg = good(p.on.id, p.type === 'plate' ? ['profile'] : ['profile', 'plate']);
+      if (!pg) return p.type === 'plate' && get(p.on.id) && !get(p.on.id).bad ? { bad: 'plateOn' } : null;
       var f = face(p.on.f);
-      if (f.k === pg.ax) return { bad: 'endFace' };
+      if (f.k === pg.ax) return { bad: pg.type === 'plate' ? 'plateFace' : 'endFace' };
+      if (pg.type === 'plate' && (f.k !== pg.k || f.sg !== pg.sg)) return { bad: 'plateFace' };
       if (Math.abs(p.on.s) > pg.len / 2 - MARGIN[p.type] + 1e-6) return { bad: 'offProfile' };
-      var b = pg.c.slice(); b[pg.ax] += p.on.s; b[f.k] += f.sg * 2;
+      var b = pg.c.slice(); b[pg.ax] += p.on.s; b[f.k] += f.sg * pg.h[f.k];
       return { a: pg.ax, k: f.k, sg: f.sg, t: 3 - pg.ax - f.k, b: b, pg: pg };
     }
     function geo(p) {
       var h, c, s, pg, mn, mx, t;
       if (p.type === 'profile') {
+        if (p.cube) { h = profH(p); return { c: p.p.slice(), ax: AXI[p.ax], len: h[0] * 2, h: h, cube: true, box: boxOf(p.p, h) }; }
         if (!(p.len >= 4 && p.len <= 300)) return { bad: 'size' };
-        h = [2, 2, 2]; h[AXI[p.ax]] = p.len / 2;
-        return { c: p.p.slice(), ax: AXI[p.ax], len: p.len, box: boxOf(p.p, h) };
+        h = profH(p);
+        return { c: p.p.slice(), ax: AXI[p.ax], len: p.len, h: h, box: boxOf(p.p, h) };
       }
       if (p.type === 'deck') {
         if (!(p.lx >= 10 && p.lx <= 200 && p.lz >= 10 && p.lz <= 200)) return { bad: 'size' };
@@ -224,15 +262,30 @@
         var ga = good(p.a, ['profile']), gb = good(p.b, ['profile']), j = ga && gb && joint(ga, gb), sp = j && j.spots[p.k];
         if (!ga || !gb) return null;
         if (!sp) return { bad: 'noJoint' };
+        var bz = sp.sz || 1;
         t = 3 - sp.d1.k - sp.d2.k; mn = sp.c.slice(); mx = sp.c.slice();
-        [sp.d1, sp.d2].forEach(function (dd) { if (dd.sg > 0) mx[dd.k] += LEG; else mn[dd.k] -= LEG; });
-        mn[t] -= 1.7; mx[t] += 1.7;
-        return { c: sp.c, d1: sp.d1, d2: sp.d2, box: { min: mn, max: mx } };
+        [sp.d1, sp.d2].forEach(function (dd) { if (dd.sg > 0) mx[dd.k] += LEG * bz; else mn[dd.k] -= LEG * bz; });
+        mn[t] -= 1.7 * bz; mx[t] += 1.7 * bz;
+        return { c: sp.c, d1: sp.d1, d2: sp.d2, sz: bz, box: { min: mn, max: mx } };
       }
       if (SLOT[p.type]) {
         s = slot(p);
         if (!s || s.bad) return s;
         c = s.b.slice(); mn = c.slice(); mx = c.slice();
+        if (p.type === 'plate') {                    // a flat plate on a face, 6 mm thick; parts can mount on its outer face
+          if (!(p.la >= 4 && p.la <= 150 && p.lt >= 4 && p.lt <= 150)) return { bad: 'size' };
+          c[s.k] += s.sg * 0.3; c[s.t] += p.v || 0;
+          h = [0, 0, 0]; h[s.a] = p.la / 2; h[s.t] = p.lt / 2; h[s.k] = 0.3;
+          return { c: c, a: s.a, k: s.k, sg: s.sg, t: s.t, ax: s.a, len: p.la, h: h, box: boxOf(c, h) };
+        }
+        if (p.type === 'caster') {                   // a swivel caster: a plate on top, the wheel straight below
+          if (s.k !== 1 || s.sg > 0) return { bad: 'casterDown' };
+          var cs = CASTERS[p.d] || CASTERS[100], cl = p.lift || 0;
+          if (!(cl >= 0 && cl <= 8)) return { bad: 'size' };
+          h = [4, 0, 4]; h[1] = (cs.h + cl) / 2;
+          var cc = c.slice(); cc[1] -= h[1];
+          return { c: c, a: s.a, k: s.k, sg: s.sg, foot: cs.h + cl, d: p.d, box: boxOf(cc, h) };
+        }
         if (p.type === 'bearing') {
           if (!((p.lift || 0) >= 0 && (p.lift || 0) <= 8)) return { bad: 'size' };
           c[s.k] += s.sg * (BEAR_H + (p.lift || 0));
@@ -242,22 +295,22 @@
           return { c: c, axis: s.t, a: s.a, k: s.k, sg: s.sg, box: { min: mn, max: mx } };
         }
         if (p.type === 'motor') {
-          var u = p.u || 0, out = p.out < 0 ? -1 : 1, lift = p.lift || 0;
+          var u = p.u || 0, out = p.out < 0 ? -1 : 1, lift = p.lift || 0, mo = motorOf(p), ms = mo.s;
           if (Math.abs(u) > 15) return { bad: 'offProfile' };
           if (!(lift >= 0 && lift <= 8)) return { bad: 'size' };
-          c[s.k] += s.sg * (5.5 + lift); c[s.t] += u;
+          c[s.k] += s.sg * (5.5 * ms + lift); c[s.t] += u;
           mn = c.slice(); mx = c.slice();
-          mn[s.a] -= 5; mx[s.a] += 5; mn[s.k] -= 4.9; mx[s.k] += 4.9;
+          mn[s.a] -= 5 * ms; mx[s.a] += 5 * ms; mn[s.k] -= 4.9 * ms; mx[s.k] += 4.9 * ms;
           if (lift > 0) { if (s.sg > 0) mn[s.k] -= lift; else mx[s.k] += lift; }     // the spacer plates under the motor
-          mn[s.t] = Math.min(c[s.t] - out * 19, c[s.t] - out * 2); mx[s.t] = Math.max(c[s.t] - out * 19, c[s.t] - out * 2);
-          return { c: c, axis: s.t, a: s.a, k: s.k, sg: s.sg, out: out, pz: s.pg.c[s.t], box: { min: mn, max: mx } };
+          mn[s.t] = Math.min(c[s.t] - out * 19 * ms, c[s.t] - out * 2 * ms); mx[s.t] = Math.max(c[s.t] - out * 19 * ms, c[s.t] - out * 2 * ms);
+          return { c: c, axis: s.t, a: s.a, k: s.k, sg: s.sg, out: out, pz: s.pg.c[s.t], ms: ms, rpm: mo.rpm, w: mo.w, box: { min: mn, max: mx } };
         }
         if (p.type === 'estop') {
           c[s.k] += s.sg * 1.6; h = [0, 0, 0]; h[s.a] = 2.4; h[s.t] = 2.4; h[s.k] = 1.6;
           return { c: c, a: s.a, k: s.k, sg: s.sg, box: boxOf(c, h) };
         }
         var dm = BOXES[p.type], A = p.turn ? dm[2] : dm[0], T = p.turn ? dm[0] : dm[2], v = p.v || 0;
-        if (Math.abs(v) > T / 2 + 2 + 1e-6) return { bad: 'offProfile' };
+        if (Math.abs(v) > T / 2 + s.pg.h[s.t] + 1e-6) return { bad: 'offProfile' };
         c[s.k] += s.sg * dm[1] / 2; c[s.t] += v; h = [0, 0, 0]; h[s.a] = A / 2; h[s.k] = dm[1] / 2; h[s.t] = T / 2;
         return { c: c, a: s.a, k: s.k, sg: s.sg, t: s.t, dims: [A, dm[1], T], box: boxOf(c, h) };
       }
@@ -287,9 +340,9 @@
       if (p.type === 'wheel') {
         pg = good(p.on.id, ['shaft']);
         if (!pg) return null;
-        var end = p.end < 0 ? -1 : 1;
-        c = pg.c.slice(); c[pg.axis] += end * (pg.len / 2 - 2); h = [R, R, R]; h[pg.axis] = 7.25;
-        return { c: c, axis: pg.axis, end: end, rad: R, body: pg.id, box: boxOf(c, h) };
+        var end = p.end < 0 ? -1 : 1, wr = wheelR(p), wf = wr / R;
+        c = pg.c.slice(); c[pg.axis] += end * (pg.len / 2 - 2); h = [wr, wr, wr]; h[pg.axis] = 7.25 * wf;
+        return { c: c, axis: pg.axis, end: end, rad: wr, f: wf, body: pg.id, box: boxOf(c, h) };
       }
       if (p.type === 'chain') {
         var a = good(p.a, ['sprocket']), b = good(p.b, ['sprocket']);
@@ -346,7 +399,7 @@
         bodies[g.motor].coups.push({ id: p.id, to: g.shaft }); bodies[g.shaft].coups.push({ id: p.id, to: g.motor });
       }
     });
-    Object.keys(bodies).forEach(function (id) { if (bodies[id].type === 'motor') { bodies[id].rpm = RB.MOTOR_RPM; bodies[id].motor = id; queue.push(id); } });
+    Object.keys(bodies).forEach(function (id) { if (bodies[id].type === 'motor') { bodies[id].rpm = G[id].rpm || RB.MOTOR_RPM; bodies[id].motor = id; queue.push(id); } });
     while (queue.length) {
       var x = queue.shift();
       edges.forEach(function (e) {
@@ -361,17 +414,21 @@
     Object.keys(bodies).forEach(function (id) {
       var b = bodies[id];
       b.wheels.forEach(function (w) {
-        var kmh = b.rpm === null ? null : b.rpm / 60 * 2 * Math.PI * R / 100 * 3.6;
+        var kmh = b.rpm === null ? null : b.rpm / 60 * 2 * Math.PI * G[w].rad / 100 * 3.6;
         wheels.push({ id: w, shaft: id, rpm: b.rpm, kmh: kmh, motor: b.motor, side: G[w].c[2] >= 0 ? 1 : -1 });
-        if (b.motor && kmh) { var m = motors[b.motor] || (motors[b.motor] = { id: b.motor, wheels: 0, kmh: kmh, ratio: b.rpm / RB.MOTOR_RPM }); m.wheels++; }
+        if (b.motor && kmh) { var m = motors[b.motor] || (motors[b.motor] = { id: b.motor, wheels: 0, kmh: kmh, ratio: b.rpm / bodies[b.motor].rpm }); m.wheels++; }
       });
     });
-    Object.keys(motors).forEach(function (id) { var m = motors[id]; m.newton = 250 / (m.kmh / 3.6); m.kgf = m.newton / 9.81; m.torque = MOTOR_NM / m.ratio; });
+    Object.keys(motors).forEach(function (id) {
+      var m = motors[id], gm = G[id], w = gm.w || 250, nm = w / ((gm.rpm || RB.MOTOR_RPM) * 2 * Math.PI / 60);
+      m.watts = w; m.newton = w / (m.kmh / 3.6); m.kgf = m.newton / 9.81; m.torque = nm / m.ratio;
+    });
     function tree(id, seen) {                       // the train as a tree, for the diagram
       var b = bodies[id];
       seen[id] = 1;
       return {
-        id: id, type: b.type, rpm: b.rpm, wheels: b.wheels.length,
+        id: id, type: b.type, rpm: b.rpm, wheels: b.wheels.length, mrpm: b.motor ? bodies[b.motor].rpm : null,
+        kmh: b.rpm && b.wheels.length ? b.rpm / 60 * 2 * Math.PI * G[b.wheels[0]].rad / 100 * 3.6 : 0,
         coups: b.coups.map(function (c) { return seen[c.to] ? null : { id: c.id, to: tree(c.to, seen) }; }).filter(Boolean),
         sprockets: b.sprockets.map(function (sid) {
           var e = edges.filter(function (x2) { return x2.a.id === sid || x2.b.id === sid; })[0], other = e && (e.a.id === sid ? e.b : e.a);
@@ -457,7 +514,7 @@
       var jt = joint(profiles[i], profiles[j]);
       if (!jt) continue;
       jt.a = profiles[i].id; jt.b = profiles[j].id; jt.used = secured[jt.a + '|' + jt.b] || {};
-      jt.secured = jt.type === 'par' || jt.type === 'edge' || Object.keys(jt.used).length > 0;
+      jt.secured = jt.type === 'par' || jt.type === 'edge' || jt.type === 'cube' || Object.keys(jt.used).length > 0;
       joints.push(jt);
       comp[root(jt.a)] = root(jt.b);
       if (jt.type === 'butt') issue('warn', 'butt', [jt.a, jt.b], 'שני פרופילים נפגשים קצה מול קצה. זה חיבור חלש, ועדיף להשתמש בפרופיל אחד ארוך.', 'Two profiles meet end to end. That is a weak joint: one long profile is better.');
@@ -513,7 +570,9 @@
     d.parts.forEach(function (p) {
       var g = G[p.id], m = 0;
       if (g.bad) return;
-      if (p.type === 'profile') m = KG.profile * p.len; else if (p.type === 'shaft') m = KG.shaft * p.len;
+      if (p.type === 'profile') m = p.cube ? (secOf(p) === '2020' ? 0.03 : 0.12) : SECS[secOf(p)].kg * p.len; else if (p.type === 'shaft') m = KG.shaft * p.len;
+      else if (p.type === 'wheel') m = KG.wheel * g.f * g.f; else if (p.type === 'motor') m = motorOf(p).kg;
+      else if (p.type === 'caster') m = (CASTERS[p.d] || CASTERS[100]).kg; else if (p.type === 'plate') m = 0.00135 * p.la * p.lt;
       else if (p.type === 'sprocket') m = 0.02 * p.n; else if (p.type === 'chain') m = KG.chain * g.n * PITCH;
       else if (p.type === 'deck') m = KG.deck * p.lx * p.lz; else m = KG[p.type] || 0;
       var c = g.box ? centre(g.box) : g.c;
@@ -521,10 +580,10 @@
       if (g.box) { if (g.box.min[1] < lowest) { lowest = g.box.min[1]; lowestG = g; } top = Math.max(top, g.box.max[1]); }
     });
     if (kg) com = com.map(function (v) { return v / kg; });
-    var wheelsG = solids.filter(function (g) { return g.type === 'wheel' && g.axis !== 1; }), contact = wheelsG.filter(function (g) { return g.box.min[1] < 0.15; });
+    var wheelsG = solids.filter(function (g) { return (g.type === 'wheel' && g.axis !== 1) || g.type === 'caster'; }), contact = wheelsG.filter(function (g) { return g.box.min[1] < 0.15; });
     var stand = { kg: kg, com: com, lowest: lowest === Infinity ? 0 : lowest, top: top, wheels: wheelsG.length, contact: contact.length, stable: false };
     if (wheelsG.length) {
-      if (lowestG && lowestG.type !== 'wheel' && lowest < Math.min.apply(null, wheelsG.map(function (g) { return g.box.min[1]; })) - 0.1)
+      if (lowestG && lowestG.type !== 'wheel' && lowestG.type !== 'caster' && lowest < Math.min.apply(null, wheelsG.map(function (g) { return g.box.min[1]; })) - 0.1)
         issue('warn', 'belly', [lowestG.id], 'החלק הנמוך ביותר הוא ' + NAMES[lowestG.type].he + ', ולא גלגל, ולכן הרובוט יישען עליו.', 'The lowest part is a ' + NAMES[lowestG.type].en + ' and not a wheel: the robot will rest on it.');
       else if (!contact.length) issue('warn', 'floating', [], 'הגלגלים אינם נוגעים בקרקע. לחצו על "הנמך לקרקע".', 'The wheels do not touch the ground. Press "Drop to ground".');
       else {
@@ -552,29 +611,43 @@
 
   /* ---------- the parts list: how many of each part the design uses ---------- */
   function bom(d, A) {
-    var G = A.G, n = { profile: 0, bracket: 0, bearing: 0, shaft: 0, wheel: 0, motor: 0, battery: 0, estop: 0, control: 0, idler: 0, coupling: 0, chain: 0, chains: 0, bolts: 0, spr: {} }, cuts = {}, longShaft = 0;
+    var G = A.G, n = { profile: 0, bracket: 0, bearing: 0, shaft: 0, wheel: 0, motor: 0, battery: 0, estop: 0, control: 0, idler: 0, coupling: 0, chain: 0, chains: 0, bolts: 0, spr: {}, plate: 0, caster: 0 }, cuts = {}, longShaft = 0;
+    var bySec = {}, cubes = {}, wheels = {}, motors = {}, casters = {}, plates = [], smallBr = 0;
     d.parts.forEach(function (p) {
       if (G[p.id].bad) return;
-      if (p.type === 'profile') { n.profile += p.len; var key = f1(p.len); cuts[key] = (cuts[key] || 0) + 1; }
-      else if (p.type === 'chain') { n.chain += G[p.id].n * PITCH; n.chains++; }
+      if (p.type === 'profile' && p.cube) { cubes[secOf(p)] = (cubes[secOf(p)] || 0) + 1; n.bolts += 3; return; }
+      if (p.type === 'profile') { n.profile += p.len; var sc = secOf(p), key = sc + '|' + f1(p.len); bySec[sc] = (bySec[sc] || 0) + p.len; cuts[key] = (cuts[key] || 0) + 1; }
+      else if (p.type === 'wheel') { var wd = WHEELS.indexOf(p.d) >= 0 ? p.d : 12; wheels[wd] = (wheels[wd] || 0) + 1; }
+      else if (p.type === 'motor') { var mk = MOTORS[p.model] ? p.model : 'my1016'; motors[mk] = (motors[mk] || 0) + 1; }
+      else if (p.type === 'caster') { var cd = CASTERS[p.d] ? p.d : 100; casters[cd] = (casters[cd] || 0) + 1; }
+      else if (p.type === 'plate') plates.push(f1(p.la) + '×' + f1(p.lt));
+      if (p.type === 'bracket' && G[p.id].sz < 1) smallBr++;
+      if (p.type === 'chain') { n.chain += G[p.id].n * PITCH; n.chains++; }
       else if (p.type === 'sprocket') n.spr[p.n] = (n.spr[p.n] || 0) + 1;
-      else if (n[p.type] !== undefined) n[p.type]++;
+      else if (n[p.type] !== undefined && p.type !== 'profile') n[p.type]++;
       if (p.type === 'shaft' && p.len > 30.001) longShaft++;
-      n.bolts += { bracket: 2, bearing: 2, motor: 4, battery: 4, control: 4, estop: 1, idler: 1 }[p.type] || 0;
+      n.bolts += { bracket: 2, bearing: 2, motor: 4, battery: 4, control: 4, estop: 1, idler: 1, plate: 4, caster: 4 }[p.type] || 0;
     });
+    n.wheel = Object.keys(wheels).reduce(function (a, k) { return a + wheels[k]; }, 0);
     var PT = RB.PARTS, rows = [], extra = 0, unknown = false;
     function row(id, used, have, unit, packOf, packPrice, name, note) {
       var over = Math.max(0, used - have), cost = over ? (packPrice === null ? null : Math.ceil(over / packOf - 1e-9) * packPrice) : 0;
       if (cost === null) unknown = true; else extra += cost;
       rows.push({ id: id, name: name || PT[id].name, used: used, have: have, unit: unit, over: over, cost: cost, note: note });
     }
-    row('profile', n.profile / 100, 8, 'm', 1, 100);
-    row('bracket', n.bracket, 25, '', 5, 18.59);
+    row('profile', (bySec['4040'] || 0) / 100, 8, 'm', 1, 100);
+    ['2020', '2040', '4080'].forEach(function (sc) { if (bySec[sc]) row('prof' + sc, bySec[sc] / 100, 0, 'm', 1, null, B('פרופיל אלומיניום ' + sc, sc + ' aluminium profile')); });
+    ['2020', '4040'].forEach(function (sc) { if (cubes[sc]) row('cube' + sc, cubes[sc], 0, '', 1, null, B('קוביית פינה ל-' + sc, sc + ' corner cube')); });
+    row('bracket', n.bracket - smallBr, 25, '', 5, 18.59);
+    if (smallBr) row('bracket20', smallBr, 0, '', 1, null, B('זווית 90 מעלות קטנה, ל-2020', 'Small corner bracket, for 2020'));
     row('tnut', n.bolts, 80, '', 10, 13.9);
     row('bearing', n.bearing, 8, '', 2, 65.39);
     row('shaft', n.shaft, 4, '', 1, 69.69, B('ציר פלדה 20 מ"מ', '20 mm steel shaft'));
-    row('wheel', n.wheel, 4, '', 1, 215.39);
+    row('wheel', wheels[12] || 0, 4, '', 1, 215.39);
+    [8, 10, 16].forEach(function (wd) { if (wheels[wd]) row('wheel' + wd, wheels[wd], 0, '', 1, null, B('גלגל ' + wd + ' אינץ\'', wd + ' inch wheel')); });
     row('hub', n.wheel, 4, '', 2, 81.39);
+    [75, 100, 125, 200].forEach(function (cd) { if (casters[cd]) row('caster' + cd, casters[cd], 0, '', 1, null, B('גלגל מסתובב ' + cd + ' מ"מ', cd + ' mm swivel caster')); });
+    if (plates.length) row('plate', plates.length, 0, '', 1, null, B('פלטת אלומיניום 6 מ"מ', '6 mm aluminium plate'), B('מידות בס"מ: ' + plates.join(', '), 'Sizes in cm: ' + plates.join(', ')));
     var table = { 12: ['sp12', 2, 19.19], 15: ['sp15', 4, 27.9], 18: ['sp18', 2, 38.39] }, teeth = Object.keys(n.spr).map(Number);
     [12, 15, 18].forEach(function (t) { if (teeth.indexOf(t) < 0) teeth.push(t); });
     teeth.sort(function (a, b) { return a - b; }).forEach(function (t) {
@@ -585,14 +658,15 @@
     row('masterlink', n.chains, 5, '', 1, 4.19);
     row('idler', n.idler, 2, '', 1, 33.39);
     if (n.coupling) row('coupling', n.coupling, 0, '', 1, null, B('מצמד לסתות (ציר המנוע ל-20 מ"מ)', 'Jaw coupling (motor shaft to 20 mm)'), B('בחרו אותו לפי הקוטר של ציר המנוע.', 'Chosen to fit the motor shaft diameter.'));
-    row('motor', n.motor, 2, '', 1, 282.9);
+    row('motor', motors.my1016 || 0, 2, '', 1, 282.9);
+    ['fast', 'strong', 'small'].forEach(function (mk) { if (motors[mk]) row('motor' + mk, motors[mk], 0, '', 1, null, MOTORS[mk].name); });
     row('battery', n.battery, 1, '', 1, 1199);
     row('estop', n.estop, 1, '', 1, 12.09);
     row('control', n.control, 1, '', 1, null, B('קופסת בקרה (כל האלקטרוניקה)', 'Control box (all the electronics)'));
     var tableTotal = Object.keys(PT).reduce(function (a, k) { return a + PT[k].qty * PT[k].unit; }, 0);
     return {
       rows: rows, extra: extra, unknown: unknown, tableTotal: tableTotal, over: [],
-      cuts: Object.keys(cuts).map(function (k) { return { len: +k, n: cuts[k] }; }).sort(function (a, b) { return b.len - a.len; }), profile: n.profile, chain: n.chain, count: n
+      cuts: Object.keys(cuts).map(function (k) { var q = k.split('|'); return { sec: q[0], len: +q[1], n: cuts[k] }; }).sort(function (a, b) { return a.sec === b.sec ? b.len - a.len : a.sec < b.sec ? -1 : 1; }), profile: n.profile, chain: n.chain, count: n
     };
   }
 
@@ -632,12 +706,20 @@
     return Object.keys(out);
   }
   function remove(d, id) { var gone = {}; gone[id] = 1; dependents(d, id).forEach(function (q) { gone[q] = 1; }); d.parts = d.parts.filter(function (p) { return !gone[p.id]; }); }
-  function component(d, id) {                       // profiles bolted together through brackets move as one
-    var set = {}, grew = true;
+  function component(d, id) {                       // profiles bolted together through brackets, or through a corner cube, move as one
+    var set = {}, grew = true, links = [];
+    d.parts.forEach(function (p) { if (p.type === 'bracket') links.push([p.a, p.b]); });
+    if (d.parts.some(function (p) { return p.cube; })) {
+      var G = resolve(d), profs = d.parts.filter(function (p) { return p.type === 'profile' && !G[p.id].bad; });
+      profs.forEach(function (cb) {
+        if (!cb.cube) return;
+        profs.forEach(function (q) { if (q.id !== cb.id) { var j = joint(G[cb.id], G[q.id]); if (j && j.type === 'cube') links.push([cb.id, q.id]); } });
+      });
+    }
     set[id] = 1;
     while (grew) {
       grew = false;
-      d.parts.forEach(function (p) { if (p.type === 'bracket' && set[p.a] !== set[p.b]) { set[p.a] = set[p.b] = 1; grew = true; } });
+      links.forEach(function (l) { if (set[l[0]] !== set[l[1]]) { set[l[0]] = set[l[1]] = 1; grew = true; } });
     }
     return Object.keys(set);
   }
@@ -666,6 +748,7 @@
   /* lengthen a profile at one end; the other end, and everything mounted on it, stays where it is */
   function stretch(d, id, end, by) {
     var p = find(d, id), k = AXI[p.ax];
+    if (p.cube) return MSG.cubeLen;
     p.len = Math.round((p.len + by) * 1000) / 1000; p.p[k] += end * by / 2;
     d.parts.forEach(function (q) { if (q.on && q.on.id === id && SLOT[q.type]) q.on.s -= end * by / 2; });
   }
@@ -759,12 +842,12 @@
     var g = hit.id ? A.G[hit.id] : null, pt = hit.pt, f, s, part, k;
     function fail(key) { return { err: MSG[key] }; }
     if (g && g.bad) g = null;
+    if (type === 'cube') { type = 'profile'; o = { ax: 'x', sec: o.sec === '2020' ? '2020' : '4040', cube: true }; }     // a corner cube is a profile that is as long as it is wide
     if (type === 'profile') {
       k = AXI[o.ax || 'x'];
-      var len = o.len || 40, h = [2, 2, 2], c = [snap(pt[0]), 0, snap(pt[2])];
-      h[k] = len / 2;
+      var sec = SECS[o.sec] ? o.sec : '4040', len = o.cube ? SECS[sec].h[0] * 2 : o.len || 40, np = { ax: AXN[k], len: len, sec: sec, wide: o.wide, cube: !!o.cube }, h = profH(np), c = [snap(pt[0]), 0, snap(pt[2])];
       if (!g) c[1] = h[1];
-      else if (g.type === 'profile' || g.type === 'deck') {
+      else if (g.type === 'profile' || g.type === 'deck' || g.type === 'plate') {
         var gc = centre(g.box);
         f = faceAt(g, pt);
         c = [gc[0] + snap(pt[0] - gc[0]), gc[1] + snap(pt[1] - gc[1]), gc[2] + snap(pt[2] - gc[2])];
@@ -772,7 +855,11 @@
         if (c[1] < h[1]) c[1] = h[1];
       } else return fail('profFree');
       flushSnap(A, c, h, g ? faceAt(g, pt).k : 1);
-      return { part: { type: 'profile', p: c, ax: AXN[k], len: len } };
+      var made = { type: 'profile', p: c, ax: AXN[k], len: len };
+      if (sec !== '4040') made.sec = sec;
+      if (o.cube) made.cube = true;
+      else if (SECS[sec].h[0] !== SECS[sec].h[1] && o.wide && o.wide !== made.ax) made.wide = o.wide;
+      return { part: made };
     }
     if (type === 'deck') {
       if (!g || g.type !== 'profile') return fail('deckTop');
@@ -781,8 +868,10 @@
       return { part: { type: 'deck', p: [g.c[0] + snap(pt[0] - g.c[0]), g.box.max[1], g.c[2] + snap(pt[2] - g.c[2])], lx: o.lx || 60, lz: o.lz || 80, crates: o.crates === undefined ? 2 : o.crates } };
     }
     if (SLOT[type]) {
-      if (!g || g.type !== 'profile') return fail('needProfile');
+      if (!g || !(g.type === 'profile' || (g.type === 'plate' && type !== 'plate'))) return fail(type === 'plate' ? 'plateOn' : 'needProfile');
       f = faceAt(g, pt);
+      if (g.type === 'plate') f = { k: g.k, sg: g.sg };                  // a plate takes parts on its outer face
+      if (type === 'caster' && (f.k !== 1 || f.sg > 0)) return fail('casterDown');
       if (f.k === g.ax) return fail('endFace');
       var lim = g.len / 2 - MARGIN[type];
       if (lim < 0) return fail('offProfile');
@@ -792,12 +881,15 @@
         var ln = lineSnap(A, null, 3 - g.ax - f.k, g.ax, g.c[g.ax] + s, 3);
         if (ln) {
           part.on.s = Math.round(Math.max(-lim, Math.min(lim, ln.c[g.ax] - g.c[g.ax])) * 1000) / 1000;
-          var lift = (ln.c[f.k] - (g.c[f.k] + f.sg * 2)) * f.sg - BEAR_H;
+          var lift = (ln.c[f.k] - (g.c[f.k] + f.sg * g.h[f.k])) * f.sg - BEAR_H;
           if (lift > 0.01 && lift <= 3) part.lift = Math.round(lift * 1000) / 1000;
         }
       }
       if (type === 'motor') { var t = 3 - g.ax - f.k; part.out = g.c[t] < 0 ? -1 : 1; part.u = 0; }
       if (type === 'battery' || type === 'control') { part.v = 0; part.turn = 0; }
+      if (type === 'motor' && o.model && MOTORS[o.model] && o.model !== 'my1016') part.model = o.model;
+      if (type === 'caster') part.d = CASTERS[o.d] ? o.d : 100;
+      if (type === 'plate') { part.la = o.la || 20; part.lt = o.lt || 20; part.v = 0; }
       return { part: part };
     }
     if (type === 'shaft') {
@@ -833,7 +925,9 @@
       if (g && g.type === 'bearing' && g.shafts) g = A.G[g.shafts[0]];
       if (type === 'wheel') {
         if (!g || g.type !== 'shaft') return fail('wheelShaft');
-        return { part: { type: 'wheel', on: { id: g.id }, end: pt[g.axis] >= g.c[g.axis] ? 1 : -1 } };
+        var wp = { type: 'wheel', on: { id: g.id }, end: pt[g.axis] >= g.c[g.axis] ? 1 : -1 };
+        if (WHEELS.indexOf(o.d) >= 0 && o.d !== 12) wp.d = o.d;
+        return { part: wp };
       }
       if (!g || (g.type !== 'shaft' && g.type !== 'motor')) return fail('needShaft');
       if (g.type === 'motor' && d.parts.some(function (q) { return (q.type === 'coupling' && q.a === g.id) || (q.type === 'sprocket' && q.on.id === g.id); })) return fail('motorBusy');
@@ -883,7 +977,7 @@
     n.parts.forEach(function (p) {
       var g = G[p.id], pg, f, m, t;
       if (!set[p.id] || !g || g.bad) return;
-      if (p.type === 'profile') { p.p = rv(p.p); p.ax = AXN[mp(AXI[p.ax]).k]; }
+      if (p.type === 'profile') { p.p = rv(p.p); if (p.wide) p.wide = AXN[mp(AXI[p.wide]).k]; else if (SECS[secOf(p)].h[0] !== SECS[secOf(p)].h[1]) p.wide = AXN[mp(AXI[p.ax] === 1 ? 0 : 1).k]; p.ax = AXN[mp(AXI[p.ax]).k]; }
       else if (p.type === 'deck') {
         if (k !== 1) { stop = MSG.rotDeck; return; }
         p.p = rv(p.p); t = p.lx; p.lx = p.lz; p.lz = t;
@@ -1053,6 +1147,7 @@
 
   P.robotDesign = {
     NAMES: NAMES, MSG: MSG, BOXES: BOXES, MARGIN: MARGIN, SLOT: SLOT, BED: BED, AXN: AXN, AXI: AXI, MISSIONS: MISSIONS,
+    SECS: SECS, WHEELS: WHEELS, CASTERS: CASTERS, MOTORS: MOTORS, secOf: secOf,
     newDesign: newDesign, clone: clone, push: push, find: find, parents: parents, face: face, faceStr: faceStr, snap: snap,
     resolve: resolve, analyse: analyse, attempt: attempt, dependents: dependents, remove: remove, component: component,
     snapDelta: snapDelta, moveProfiles: moveProfiles, stretch: stretch, dropToGround: dropToGround, tension: tension,

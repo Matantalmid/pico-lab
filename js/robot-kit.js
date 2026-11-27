@@ -58,12 +58,41 @@
       var t = g.type, c = g.c, s, i;
       if (t === 'profile') {
         place(c, (g.ax + 1) % 3, 1, (g.ax + 2) % 3, 1);
-        box(g.len, 4, 4, 'alu');
-        box(g.len - 0.1, 0.03, 0.9, 'slot', 0, 2.01, 0); box(g.len - 0.1, 0.03, 0.9, 'slot', 0, -2.01, 0);
-        box(g.len - 0.1, 0.9, 0.03, 'slot', 0, 0, 2.01); box(g.len - 0.1, 0.9, 0.03, 'slot', 0, 0, -2.01);
+        var hy = g.h ? g.h[(g.ax + 1) % 3] : 2, hz = g.h ? g.h[(g.ax + 2) % 3] : 2, pitch = 2 * Math.min(hy, hz), sw = pitch < 3 ? 0.55 : 0.9, q;
+        if (g.cube) {                                // a corner cube: a solid block with a round hole on each face
+          box(2 * hy, 2 * hy, 2 * hy, 'cast');
+          [[0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1], [1, 0, 0], [-1, 0, 0]].forEach(function (v) {
+            var hl = cylY(hy * 0.35, 0.06, 'dark', v[0] * (hy + 0.01), v[1] * (hy + 0.01), v[2] * (hy + 0.01));
+            if (v[0]) hl.rotation.z = Math.PI / 2; else if (v[2]) hl.rotation.x = Math.PI / 2;
+          });
+        } else {
+          box(g.len, 2 * hy, 2 * hz, 'alu');
+          for (q = 0; q < Math.round(2 * hz / pitch); q++) {            // the slots: one per 2 cm on the 20 series, one per 4 cm on the 40 series
+            var oz = (q - (Math.round(2 * hz / pitch) - 1) / 2) * pitch;
+            box(g.len - 0.1, 0.03, sw, 'slot', 0, hy + 0.01, oz); box(g.len - 0.1, 0.03, sw, 'slot', 0, -hy - 0.01, oz);
+          }
+          for (q = 0; q < Math.round(2 * hy / pitch); q++) {
+            var oy = (q - (Math.round(2 * hy / pitch) - 1) / 2) * pitch;
+            box(g.len - 0.1, sw, 0.03, 'slot', 0, oy, hz + 0.01); box(g.len - 0.1, sw, 0.03, 'slot', 0, oy, -hz - 0.01);
+          }
+        }
+      } else if (t === 'plate') {
+        place(c, g.k, g.sg, g.t, 1);                 // local y away from the face, local z across, local x along
+        box(g.h[g.a] * 2, 0.6, g.h[g.t] * 2, 'alu');
+        [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q2) { cylY(0.45, 0.2, 'steel', q2[0] * (g.h[g.a] - 1.2), 0.35, q2[1] * (g.h[g.t] - 1.2), null, hex); });
+      } else if (t === 'caster') {
+        place(c, 1, -1, g.a, 1);                     // local y points down
+        var cr = (g.d || 100) / 20, ch = g.foot - (p.lift || 0);
+        if (p.lift > 0) box(8, p.lift, 8, 'alu', 0, p.lift / 2, 0);
+        var top = p.lift || 0;
+        box(8, 0.4, 8, 'steel', 0, top + 0.2, 0);
+        cylY(2.2, 1.2, 'steel', 0, top + 1, 0);
+        box(0.4, ch - cr - 1.5, 3.2, 'steel', 0, top + 1.5 + (ch - cr - 1.5) / 2, 1.9); box(0.4, ch - cr - 1.5, 3.2, 'steel', 0, top + 1.5 + (ch - cr - 1.5) / 2, -1.9);
+        cylZ(cr, 2.6, 'rubber', 0, top + ch - cr, 0); cylZ(cr * 0.5, 2.8, 'rim', 0, top + ch - cr, 0); cylZ(0.4, 4.2, 'steel', 0, top + ch - cr, 0);
       } else if (t === 'bracket') {
         var d1 = vec(g.d1.k, g.d1.sg), d2 = vec(g.d2.k, g.d2.sg), d3 = new THREE.Vector3().crossVectors(d1, d2);
         grp.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(d1, d2, d3)); grp.position.set(c[0], c[1], c[2]);
+        if (g.sz && g.sz !== 1) grp.scale.setScalar(g.sz);
         put(triGeo, 'grey');
         cylY(0.55, 0.5, 'steel', 1.9, 0.25, 0, null, hex);
         var b2 = cylY(0.55, 0.5, 'steel', 0.25, 1.9, 0, null, hex); b2.rotation.z = Math.PI / 2;
@@ -98,6 +127,7 @@
       } else if (t === 'wheel') {
         place(c, (g.axis + 2) % 3, 1, g.axis, g.end);
         s = spinner(g.end, g.body);
+        if (g.f && g.f !== 1) s.scale.setScalar(g.f);         // 8, 10 or 16 inch: the same wheel, scaled
         put(tireGeo, 'rubber', 0, 0, 0, s);
         cylZ(8.8, 11.5, 'rim', 0, 0, 0, s); cylZ(6.2, 11.9, 'dark', 0, 0, 0, s);
         cylZ(4.6, 1.6, 'steel', 0, 0, 6.4, s); cylZ(2.2, 5, 'steel', 0, 0, -3.6, s);
@@ -111,12 +141,13 @@
         s.add(kn);
       } else if (t === 'motor') {
         place(c, g.k, g.sg, g.axis, g.out);        // local z is the way the shaft points
-        var zp = (g.pz - c[g.axis]) * g.out, z0 = Math.min(zp - 2, -7), z1 = Math.max(zp + 2, -2);
-        box(13, 0.6, z1 - z0, 'grey', 0, -5.2, (z0 + z1) / 2);
-        if (p.lift > 0) box(11, p.lift, z1 - z0 - 1, 'alu', 0, -5.5 - p.lift / 2, (z0 + z1) / 2);      // spacer plates under the motor
-        box(9.5, 9.5, 5, 'motor', 0, 0, -4.5);
-        cylZ(4.9, 11, 'motor', 0, 0, -12.5); cylZ(5.05, 1.2, 'steel', 0, 0, -18.4);
-        cylZ(0.85, 4, 'steel', 0, 0, -0.5);
+        var ms = g.ms || 1, zp = (g.pz - c[g.axis]) * g.out, z0 = Math.min(zp - 2, -7 * ms), z1 = Math.max(zp + 2, -2 * ms);
+        box(13 * ms, 0.6, z1 - z0, 'grey', 0, -5.2 * ms, (z0 + z1) / 2);
+        if (p.lift > 0) box(11 * ms, p.lift, z1 - z0 - 1, 'alu', 0, -5.5 * ms - p.lift / 2, (z0 + z1) / 2);      // spacer plates under the motor
+        var mg = new THREE.Group(); mg.scale.setScalar(ms); grp.add(mg);          // the same motor, larger or smaller
+        box(9.5, 9.5, 5, ms < 0.6 ? 'yellow' : 'motor', 0, 0, -4.5, mg);
+        cylZ(4.9, 11, ms > 1.1 ? 'red' : 'motor', 0, 0, -12.5, mg); cylZ(5.05, 1.2, 'steel', 0, 0, -18.4, mg);
+        cylZ(0.85, 4, 'steel', 0, 0, -0.5, mg);
       } else if (t === 'battery' || t === 'control') {
         place(c, g.k, g.sg, g.t, 1);
         var D = g.dims;

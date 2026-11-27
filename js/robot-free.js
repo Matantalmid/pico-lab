@@ -37,17 +37,21 @@
       idler: B('לחצו על שרשרת.', 'Click a chain.'),
       battery: B('לחצו על פאה של פרופיל.', 'Click a face of a profile.'), control: B('לחצו על פאה של פרופיל.', 'Click a face of a profile.'), estop: B('לחצו על פאה של פרופיל, במקום שקל להגיע אליו.', 'Click a face of a profile, somewhere easy to reach.'),
       deck: B('לחצו על הפאה העליונה של פרופיל.', 'Click the top face of a profile.'),
+      cube: B('לחצו על הקרקע, או על פאה של פרופיל. לקובייה יש פאה לכל כיוון, ואליה מתחברים קצוות של פרופילים.', 'Click the ground, or a face of a profile. The cube has a face in every direction, for the ends of profiles.'),
+      plate: B('לחצו על פאה של פרופיל. אחר כך אפשר להרכיב על הפלטה מנוע, מיסבים, מצבר או גלגל מסתובב.', 'Click a face of a profile. Then a motor, bearings, a battery or a caster can mount on the plate.'),
+      caster: B('לחצו על הפאה התחתונה של פרופיל או של פלטה.', 'Click the bottom face of a profile or a plate.'),
       measure: B('לחצו על שתי נקודות כדי למדוד את המרחק ביניהן.', 'Click two points to measure the distance between them.')
     },
     coupInfo: B('המצמד מחבר את ציר המנוע לציר אחר, וכך הציר מסתובב בדיוק במהירות של המנוע (1:1). הציר חייב לשבת על שני מיסבים משלו, כדי שהמשקל והמשיכה של השרשראות לא יעמיסו על המנוע.', 'The coupling joins the motor shaft to the shaft: the shaft turns at exactly the motor speed (1:1). The shaft must sit on two bearings of its own, so the weight and the chain pull do not fall on the motor.'),
     coupW: B('מצמד', 'coupling'),
     stop: B('סיימו להניח (Esc)', 'Stop placing (Esc)'),
-    opt: { len: B('אורך', 'Length'), dir: B('כיוון', 'Direction'), teeth: B('שיניים', 'Teeth'), lx: B('אורך', 'Length'), lz: B('רוחב', 'Width'), crates: B('ארגזים', 'Crates') },
+    opt: { sec: B('חתך', 'Section'), wide: B('הצד הרחב', 'Wide side'), wheelD: B('קוטר הגלגל', 'Wheel size'), model: B('דגם', 'Model'), casterD: B('גודל הגלגל', 'Wheel size'), la: B('אורך לאורך הפרופיל', 'Length along the profile'), lt: B('רוחב', 'Width'), len: B('אורך', 'Length'), dir: B('כיוון', 'Direction'), teeth: B('שיניים', 'Teeth'), lx: B('אורך', 'Length'), lz: B('רוחב', 'Width'), crates: B('ארגזים', 'Crates') },
     dirs: { x: B('לאורך', 'Along'), z: B('לרוחב', 'Across'), y: B('אנכי', 'Upright') },
+    wides: { x: B('קדימה', 'Forward'), y: B('למעלה', 'Up'), z: B('הצידה', 'Sideways') }, inch: B('אינץ\x27', 'in'),
     used: B('בשימוש', 'used'), ofTable: B('בטבלה', 'in the table'),
     startH: B('נקודת התחלה', 'Where to start'), startEmpty: B('במה ריקה', 'Empty stage'), startFrame: B('שלדה בסיסית', 'Basic frame'), startRobot: B('הרובוט לדוגמה', 'The example robot'),
     tipsH: B('איך מתחילים', 'How to start'),
-    tips: [B('גררו "פרופיל 4040" מהארגז אל הקרקע. אחרי שהוא מונח, אפשר לשנות בלוח את האורך ואת הכיוון שלו.', 'Drag a "4040 profile" from the box onto the ground. Its length and direction are changed in the panel once it is down.'),
+    tips: [B('גררו "פרופיל אלומיניום" מהארגז אל הקרקע, ובחרו את החתך שלו. אחרי שהוא מונח, אפשר לשנות בלוח את האורך ואת הכיוון שלו.', 'Drag an "Aluminium profile" from the box onto the ground, and choose its section. Its length and direction are changed in the panel once it is down.'),
       B('לחצו על הפרופיל, והרימו אותו בעזרת החץ הירוק. הגלגלים צריכים מקום מתחתיו.', 'Click the profile and lift it with the green arrow. The wheels need room under it.'),
       B('הוסיפו מיסבים, צירים, גלגלי שיניים, גלגלים ומנוע. כדי להגיע לצד התחתון של פרופיל, סובבו את המבט אל מתחת לרצפה.', 'Add bearings, shafts, sprockets, wheels and a motor. To reach the underside of a profile, turn the view to below the floor.'),
       B('בנו צד אחד של הרובוט, ואז לחצו על "שיקוף לצד השני". בסוף, לחצו על "הנמך לקרקע".', 'Build one side of the robot, then press "Mirror to the other side". At the end press "Drop to ground".')],
@@ -71,7 +75,7 @@
     motor: B('מנוע', 'Motor'), shaft: B('ציר', 'Shaft'), rpm: B('סל"ד', 'rpm'), torque: B('מומנט', 'torque'), wheelsN: B('גלגלים', 'wheels'), kmh: B('קמ"ש', 'km/h'),
     chainW: B('שרשרת', 'chain'), noChain: B('בלי שרשרת', 'no chain'), undriven: B('צירים שאינם מקבלים הנעה', 'Shafts that are not driven'),
     resH: B('תוצאה', 'Result'), perMotor: B('לכל מנוע', 'Per motor'), speed: B('מהירות נסיעה', 'Driving speed'), push: B('כוח דחיפה אידאלי', 'Ideal pushing force'), wheelTq: B('מומנט בגלגלים', 'Torque at the wheels'),
-    pushNote: B('כוח הדחיפה מחושב כהספק המנוע (250W) חלקי המהירות, בלי הפסדים ובלי החלקה. במציאות הוא נמוך יותר.', 'The pushing force is the motor power (250 W) divided by the speed, with no losses and no slipping. In reality it is lower.'),
+    pushNote: B('כוח הדחיפה מחושב כהספק של המנוע חלקי המהירות, בלי הפסדים ובלי החלקה. במציאות הוא נמוך יותר.', 'The pushing force is the motor power divided by the speed, with no losses and no slipping. In reality it is lower.'),
     bomH: B('רשימת חלקים', 'Parts list'), part: B('חלק', 'Part'), usedC: B('כמות', 'Quantity'),
     cutsH: B('רשימת חיתוך לפרופיל', 'Cutting list for the profile'), pieces: B('יח\'', 'pcs'), total: B('סה"כ', 'Total'),
     chainsH: B('שרשראות', 'Chains'), weightH: B('משקל משוער', 'Estimated weight'), kg: B('ק"ג', 'kg'), weightNote: B('החישוב מבוסס על משקל טיפוסי של כל חלק, בלי המטען. זו הערכה בלבד.', 'From a typical weight for each part, without the load. This is an estimate.'),
@@ -87,13 +91,18 @@
     noThree: B('התצוגה התלת-ממדית לא נטענה. בפעם הראשונה היא צריכה חיבור לאינטרנט, או את הקובץ three.min.js שבתיקייה js/vendor.', 'The 3D view did not load. It needs an internet connection the first time, or the file three.min.js in the folder js/vendor.')
   };
   var PALETTE = [
-    ['frame', 'profile', B('פרופיל 4040', '4040 profile')], ['frame', 'bracket', B('זווית 90°', 'Corner bracket')],
+    ['frame', 'profile', B('פרופיל אלומיניום', 'Aluminium profile')], ['frame', 'bracket', B('זווית 90°', 'Corner bracket')], ['frame', 'cube', B('קוביית פינה', 'Corner cube')], ['frame', 'plate', B('פלטה', 'Plate')],
     ['drive', 'bearing', B('מיסב UCP204', 'UCP204 bearing')], ['drive', 'shaft', B('ציר 20 מ"מ', '20 mm shaft')], ['drive', 'sprocket', B('גלגל שיניים', 'Sprocket')],
-    ['drive', 'wheel', B('רכזת וגלגל', 'Hub and wheel')], ['drive', 'motor', B('מנוע', 'Motor')], ['drive', 'coupling', B('מצמד', 'Coupling')],['drive', 'chain', B('שרשרת', 'Chain')], ['drive', 'idler', B('גלגל מתיחה', 'Idler')],
+    ['drive', 'wheel', B('רכזת וגלגל', 'Hub and wheel')], ['drive', 'caster', B('גלגל מסתובב', 'Caster')], ['drive', 'motor', B('מנוע', 'Motor')], ['drive', 'coupling', B('מצמד', 'Coupling')],['drive', 'chain', B('שרשרת', 'Chain')], ['drive', 'idler', B('גלגל מתיחה', 'Idler')],
     ['power', 'battery', B('מצבר', 'Battery')], ['power', 'control', B('קופסת בקרה', 'Control box')], ['power', 'estop', B('לחצן חירום', 'Emergency stop')],
     ['load', 'deck', B('משטח וארגזים', 'Deck and crates')]
   ];
   var INFO = { profile: 'profile', bracket: 'bracket', bearing: 'bearing', shaft: 'shaft', wheel: 'wheel', motor: 'motor', chain: 'chain', idler: 'idler', battery: 'battery', estop: 'estop', deck: 'deck' };
+  var XINFO = {
+    cube: { role: B('מחברת עד שישה קצוות של פרופילים בפינה אחת, בלי זוויות.', 'Joins up to six profile ends at one corner, with no brackets.'), to: B('קצה של פרופיל נלחץ על כל פאה שלה, וברג אחד נכנס דרך המרכז.', 'A profile end presses on each face, with one bolt through the middle.') },
+    plate: { role: B('משטח שטוח שאפשר להבריג אליו כל חלק, גם במקום שאין בו פרופיל.', 'A flat surface any part can bolt onto, even where there is no profile.'), to: B('מוברגת לפאה של פרופיל באומי פטיש, וחלקים מוברגים לצד החיצוני שלה.', 'Bolts to a profile face with T-nuts, and parts bolt to its outer face.') },
+    caster: { role: B('גלגל חופשי שמסתובב לכל כיוון. כך אפשר לבנות רובוט עם שני גלגלים מונעים ותמיכה שלישית.', 'A free wheel that turns any way. With it a robot can have two driven wheels and a third support.'), to: B('מוברג לפאה התחתונה של פרופיל או של פלטה. הגובה שלו חייב להתאים לגובה של שאר הגלגלים.', 'Bolts to the bottom face of a profile or a plate. Its height must match the other wheels.') }
+  };
 
   /* a small picture of every part for the parts box, drawn once with the same models the editor uses */
   var THUMBS = null;
@@ -111,6 +120,10 @@
       d.parts.forEach(function (p) { var g = A.G[p.id]; if (!g.bad && !pick[p.type]) pick[p.type] = g; });
       pick.profile = As.G[small.parts[0].id]; pick.deck = As.G[small.parts[1].id];
       pick.coupling = { id: 'thumb', type: 'coupling', part: {}, c: [0, 0, 0], axis: 2, out: 1, motor: null };
+      var more = D.newDesign(), mp = D.push(more, { type: 'profile', p: [0, 30, 0], ax: 'x', len: 30 });
+      var mPlate = D.push(more, { type: 'plate', on: { id: mp, f: '+y', s: 0 }, la: 20, lt: 16, v: 0 }), mCaster = D.push(more, { type: 'caster', on: { id: mp, f: '-y', s: 0 }, d: 100 });
+      var mCube = D.push(more, { type: 'profile', p: [80, 2, 0], ax: 'x', len: 4, cube: true }), Am = D.analyse(more);
+      pick.plate = Am.G[mPlate]; pick.caster = Am.G[mCaster]; pick.cube = Am.G[mCube];
       PALETTE.forEach(function (q) {
         var g = pick[q[1]];
         if (!g) return;
@@ -144,7 +157,7 @@
     var saved = ls('pico.robot.free'), d0 = valid(saved) ? saved : D.newDesign();
     var store = { d: d0, A: D.analyse(d0), sel: null, tool: null, run: false, bed: true };
     var dragT = null;
-    var st = { tab: null, hist: [], fut: [], opts: { profile: { ax: 'x', len: 40 }, shaft: { len: 30 }, sprocket: { n: 15 }, deck: { lx: 60, lz: 80, crates: 2 } }, confirmDel: false, hint: null, measured: null, base: null, changed: false }, view = null;
+    var st = { tab: null, hist: [], fut: [], opts: { profile: { ax: 'x', len: 40, sec: '4040', wide: null }, cube: { sec: '4040' }, plate: { la: 20, lt: 20 }, shaft: { len: 30 }, sprocket: { n: 15 }, wheel: { d: 12 }, caster: { d: 100 }, motor: { model: 'my1016' }, deck: { lx: 60, lz: 80, crates: 2 } }, confirmDel: false, hint: null, measured: null, base: null, changed: false }, view = null;
 
     /* the model fills the screen; the toolbar, the parts box and the panels float over it */
     root.innerHTML = '<div class="rf-stage" id="rf-stage"><div class="rf-canvas" id="rf-canvas"><p class="muted rb-msg">' + T(L.loading) + '</p></div>' +
@@ -253,17 +266,38 @@
 
     /* ---------- parts panel: palette, tool options, selected part ---------- */
     function usedOf(type) {                          // how many of this part are on the stage (nothing when none)
-      var n = store.d.parts.filter(function (p) { return p.type === type && !store.A.G[p.id].bad; }).length;
+      var n = store.d.parts.filter(function (p) { return (type === 'cube' ? p.type === 'profile' && p.cube : p.type === type && !p.cube) && !store.A.G[p.id].bad; }).length;
       return n ? String(n) : '';
     }
     function num(label, path, val, step, min, max, unit) {
       return '<label class="rf-f"><span>' + T(label) + '</span><span class="rf-in"><input type="number" data-f="' + path + '" value="' + (Math.round(val * 100) / 100) + '" step="' + step + '"' + (min !== undefined ? ' min="' + min + '"' : '') + (max !== undefined ? ' max="' + max + '"' : '') + '>' + (unit ? '<i>' + T(unit) + '</i>' : '') + '</span></label>';
     }
+    /* a row of choice buttons. `where` is 'opt' for the part about to be placed, 'part' for the selected one */
+    function chips(label, where, key, list, cur) {
+      return '<div class="rf-f"><span>' + T(label) + '</span><span class="chips" style="margin:0">' + list.map(function (q) {
+        return '<button type="button" class="chip' + (String(cur) === String(q[0]) ? ' on' : '') + '" data-pick="' + where + '|' + key + '|' + q[0] + '">' + esc(typeof q[1] === 'string' ? q[1] : T(q[1])) + '</button>';
+      }).join('') + '</span></div>';
+    }
+    var SEC_LIST = ['2020', '2040', '4040', '4080'].map(function (s) { return [s, s]; });
+    function wideList(ax) { return ['y', 'x', 'z'].filter(function (a) { return a !== ax; }).map(function (a) { return [a, L.wides[a]]; }); }
+    function secIsRect(sec) { var h = D.SECS[sec] && D.SECS[sec].h; return h && h[0] !== h[1]; }
+    function defWide(ax) { return ax === 'y' ? 'x' : 'y'; }
+    function wheelList() { return D.WHEELS.map(function (w) { return [w, w + '″']; }); }
+    function casterList() { return Object.keys(D.CASTERS).map(function (k) { return [k, k + ' mm']; }); }
+    function motorList() { return Object.keys(D.MOTORS).map(function (k) { return [k, D.MOTORS[k].name]; }); }
     function toolOptions() {
       var t = store.tool, o, html = '';
       if (!t || !st.opts[t.type]) return '';
       o = st.opts[t.type];
-      if (t.type === 'profile') html = num(L.opt.len, 'opt.len', o.len, 0.5, 4, 300, L.cm) + '<div class="rf-f"><span>' + T(L.opt.dir) + '</span><span class="chips" style="margin:0">' + ['x', 'z', 'y'].map(function (a) { return '<button type="button" class="chip' + (o.ax === a ? ' on' : '') + '" data-ax="' + a + '">' + T(L.dirs[a]) + '</button>'; }).join('') + '</span></div>';
+      if (t.type === 'profile') {
+        html = chips(L.opt.sec, 'opt', 'sec', SEC_LIST, o.sec) + num(L.opt.len, 'opt.len', o.len, 0.5, 4, 300, L.cm) + '<div class="rf-f"><span>' + T(L.opt.dir) + '</span><span class="chips" style="margin:0">' + ['x', 'z', 'y'].map(function (a) { return '<button type="button" class="chip' + (o.ax === a ? ' on' : '') + '" data-ax="' + a + '">' + T(L.dirs[a]) + '</button>'; }).join('') + '</span></div>';
+        if (secIsRect(o.sec)) html += chips(L.opt.wide, 'opt', 'wide', wideList(o.ax), o.wide && o.wide !== o.ax ? o.wide : defWide(o.ax));
+      }
+      if (t.type === 'cube') html = chips(L.opt.sec, 'opt', 'sec', [['2020', '2020'], ['4040', '4040']], o.sec);
+      if (t.type === 'plate') html = num(L.opt.la, 'opt.la', o.la, 1, 4, 150, L.cm) + num(L.opt.lt, 'opt.lt', o.lt, 1, 4, 150, L.cm);
+      if (t.type === 'wheel') html = chips(L.opt.wheelD, 'opt', 'd', wheelList(), o.d);
+      if (t.type === 'caster') html = chips(L.opt.casterD, 'opt', 'd', casterList(), o.d);
+      if (t.type === 'motor') html = chips(L.opt.model, 'opt', 'model', motorList(), o.model);
       if (t.type === 'shaft') html = num(L.opt.len, 'opt.len', o.len, 0.5, 6, 100, L.cm);
       if (t.type === 'sprocket') html = num(L.opt.teeth, 'opt.n', o.n, 1, 9, 45);
       if (t.type === 'deck') html = num(L.opt.lx, 'opt.lx', o.lx, 1, 10, 200, L.cm) + num(L.opt.lz, 'opt.lz', o.lz, 1, 10, 200, L.cm) + num(L.opt.crates, 'opt.crates', o.crates, 1, 0, 4);
@@ -278,23 +312,30 @@
     function inspectorHtml() {
       var id = store.sel, p = id && D.find(store.d, id), g = p && store.A.G[id], html, acts = '';
       if (!p || !g) return '<p class="muted">' + T(L.none) + '</p>';
-      var name = PALETTE.filter(function (q) { return q[1] === p.type; })[0][2], info = RB.PARTS[INFO[p.type]];
-      html = '<h3>' + esc(T(name)) + '</h3>';
+      var kind = p.cube ? 'cube' : p.type, name = PALETTE.filter(function (q) { return q[1] === kind; })[0][2], info = XINFO[kind] || RB.PARTS[INFO[p.type]];
+      html = '<h3>' + esc(T(name)) + (p.type === 'profile' ? ' <span class="ltr">' + D.secOf(p) + '</span>' : '') + '</h3>';
       if (g.bad) return html + '<p class="callout">' + esc(T(D.MSG[g.bad])) + '</p><div class="rf-acts"><button type="button" class="btn ghost small" data-act="del">' + T(L.del) + '</button></div>';
       var rotB = function (axes, label) { return '<div class="rf-f"><span>' + T(L.rot) + '</span><span class="chips" style="margin:0">' + axes.map(function (k) { return '<button type="button" class="chip" data-rot="' + k + '">↻ ' + T(label || L.rotAx[k]) + '</button>'; }).join('') + '</span></div>'; };
-      if (p.type === 'profile') html += num(L.f.len, 'len', p.len, 0.5, 4, 300, L.cm) + num(L.f.x, 'p.0', p.p[0], 0.5) + num(L.f.y, 'p.1', p.p[1], 0.5, 0) + num(L.f.z, 'p.2', p.p[2], 0.5) + rotB([0, 1, 2]);
+      if (p.type === 'profile' && p.cube) html += chips(L.opt.sec, 'part', 'sec', [['2020', '2020'], ['4040', '4040']], D.secOf(p)) + num(L.f.x, 'p.0', p.p[0], 0.5) + num(L.f.y, 'p.1', p.p[1], 0.5, 0) + num(L.f.z, 'p.2', p.p[2], 0.5);
+      else if (p.type === 'profile') {
+        html += chips(L.opt.sec, 'part', 'sec', SEC_LIST, D.secOf(p));
+        if (secIsRect(D.secOf(p))) html += chips(L.opt.wide, 'part', 'wide', wideList(p.ax), p.wide && p.wide !== p.ax ? p.wide : defWide(p.ax));
+        html += num(L.f.len, 'len', p.len, 0.5, 4, 300, L.cm) + num(L.f.x, 'p.0', p.p[0], 0.5) + num(L.f.y, 'p.1', p.p[1], 0.5, 0) + num(L.f.z, 'p.2', p.p[2], 0.5) + rotB([0, 1, 2]);
+      }
       else if (p.type === 'deck') html += num(L.f.lx, 'lx', p.lx, 1, 10, 200, L.cm) + num(L.f.lz, 'lz', p.lz, 1, 10, 200, L.cm) + num(L.f.crates, 'crates', p.crates, 1, 0, 4) + num(L.f.x, 'p.0', p.p[0], 0.5) + num(L.f.z, 'p.2', p.p[2], 0.5) + rotB([1]);
       else if (D.SLOT[p.type]) {
         html += num(L.f.s, 'on.s', p.on.s, 0.5, undefined, undefined, L.cm) + rotB([g.a], L.rotProf);
-        if (p.type === 'motor' || p.type === 'bearing') html += num(L.f.lift, 'lift', p.lift || 0, 0.1, 0, 8, L.cm);
-        if (p.type === 'motor') { html += num(L.f.u, 'u', p.u || 0, 0.1, -15, 15, L.cm); acts += '<button type="button" class="btn ghost small" data-act="flipOut">' + T(L.flip) + '</button>'; }
+        if (p.type === 'motor' || p.type === 'bearing' || p.type === 'caster') html += num(L.f.lift, 'lift', p.lift || 0, 0.1, 0, 8, L.cm);
+        if (p.type === 'motor') { html += chips(L.opt.model, 'part', 'model', motorList(), p.model || 'my1016') + num(L.f.u, 'u', p.u || 0, 0.1, -15, 15, L.cm); acts += '<button type="button" class="btn ghost small" data-act="flipOut">' + T(L.flip) + '</button>'; }
+        if (p.type === 'caster') html += chips(L.opt.casterD, 'part', 'd', casterList(), p.d || 100);
+        if (p.type === 'plate') html += num(L.opt.la, 'la', p.la, 1, 4, 150, L.cm) + num(L.opt.lt, 'lt', p.lt, 1, 4, 150, L.cm) + num(L.f.v, 'v', p.v || 0, 0.5, undefined, undefined, L.cm);
         if (p.type === 'battery' || p.type === 'control') { html += num(L.f.v, 'v', p.v || 0, 0.5, undefined, undefined, L.cm); acts += '<button type="button" class="btn ghost small" data-act="turn">' + T(L.turn) + '</button>'; }
         html += faceButtons(g, p);
       } else if (p.type === 'shaft') html += num(L.f.len, 'len', p.len, 0.5, 6, 100, L.cm) + (g.coup ? '' : num(L.f.sShaft, 'on.s', p.on.s, 0.5, undefined, undefined, L.cm));
       else if (p.type === 'sprocket') {
         html += num(L.f.n, 'n', p.n, 1, 9, 45) + (store.A.G[p.on.id].type === 'shaft' ? num(L.f.sSpr, 'on.s', p.on.s, 0.1, undefined, undefined, L.cm) : '') +
           '<p class="muted">' + T(L.pitch) + ': <b class="ltr">' + f1(RB.pd(p.n) * 10) + '</b> ' + T(L.mm) + '</p>';
-      } else if (p.type === 'wheel') acts += '<button type="button" class="btn ghost small" data-act="flipEnd">' + T(L.otherEnd) + '</button>';
+      } else if (p.type === 'wheel') { html += chips(L.opt.wheelD, 'part', 'd', wheelList(), p.d || 12); acts += '<button type="button" class="btn ghost small" data-act="flipEnd">' + T(L.otherEnd) + '</button>'; }
       else if (p.type === 'coupling') html += '<p>' + T(L.coupInfo) + '</p>';
       else if (p.type === 'idler') acts += '<button type="button" class="btn ghost small" data-act="flipSpan">' + T(L.otherSpan) + '</button>';
       else if (p.type === 'chain') {
@@ -350,9 +391,9 @@
     function drivePanel() {
       var A = store.A, dr = A.drive, html = '<h3>' + T(L.driveH) + '</h3><p>' + T(L.driveLead) + '</p>';
       function node(n) {
-        var kmh = n.rpm ? n.rpm / 60 * 2 * Math.PI * RB.R / 100 * 3.6 : 0;
+        var kmh = n.kmh || 0;
         var h = '<div class="rf-node ' + n.type + '" data-sel="' + n.id + '"><b>' + T(n.type === 'motor' ? L.motor : L.shaft) + '</b> <span class="ltr">' + f1(n.rpm) + '</span> ' + T(L.rpm) +
-          (n.type === 'shaft' ? ' · ' + T(L.torque) + ' <span class="ltr">×' + f2(RB.MOTOR_RPM / n.rpm) + '</span>' : '') +
+          (n.type === 'shaft' ? ' · ' + T(L.torque) + ' <span class="ltr">×' + f2((n.mrpm || RB.MOTOR_RPM) / n.rpm) + '</span>' : '') +
           (n.wheels ? ' · ' + n.wheels + ' ' + T(L.wheelsN) + ' · <b class="ltr">' + f1(kmh) + '</b> ' + T(L.kmh) : '') + '</div>';
         n.sprockets.forEach(function (s) {
           if (s.to) h += '<div class="rf-link"><span class="rf-gear" data-sel="' + s.id + '">⚙ ' + s.n + '</span><span class="rf-ch" data-sel="' + s.chain + '">' + T(L.chainW) + ' · ' + s.links + ' ' + T(L.links) + '</span><span class="rf-gear">⚙ ' + s.toN + '</span><small class="ltr">' + s.n + ':' + s.toN + ' = ×' + f2(s.n / s.toN) + '</small></div><div class="rf-sub">' + node(s.to) + '</div>';
@@ -382,7 +423,7 @@
           var u = r.unit ? ' ' + r.unit : '', q = function (v) { return r.unit ? f2(v) : String(v); };
           return '<tr><td>' + esc(T(r.name)) + (r.note ? '<br><small class="muted">' + esc(T(r.note)) + '</small>' : '') + '</td><td class="ltr">' + q(r.used) + u + '</td></tr>';
         }).join('') + '</tbody></table></div>';
-      html += '<h3>' + T(L.cutsH) + '</h3><div class="card tbl-wrap" style="padding:8px 12px"><table class="tbl"><tbody>' + bm.cuts.map(function (c) { return '<tr><td class="ltr"><b>' + c.n + ' × ' + f1(c.len) + '</b> ' + T(L.cm) + '</td></tr>'; }).join('') +
+      html += '<h3>' + T(L.cutsH) + '</h3><div class="card tbl-wrap" style="padding:8px 12px"><table class="tbl"><tbody>' + bm.cuts.map(function (c) { return '<tr><td class="ltr"><b>' + c.n + ' × ' + f1(c.len) + '</b> ' + T(L.cm) + ' <span class="muted">(' + c.sec + ')</span></td></tr>'; }).join('') +
         '<tr><td><b>' + T(L.total) + ': <span class="ltr">' + f2(bm.profile / 100) + ' m</span></b></td></tr></tbody></table></div>';
       if (chains.length) html += '<h3>' + T(L.chainsH) + '</h3><div class="card tbl-wrap" style="padding:8px 12px"><table class="tbl"><tbody>' + chains.map(function (p) {
         var g = A.G[p.id];
@@ -442,6 +483,24 @@
         if (ks.length === 2) p[ks[0]][ks[1]] = v; else p[path] = v;
       });
     }
+    /* a choice button: "opt|key|value" sets an option of the part about to be placed, "part|key|value" changes the selected part */
+    function pick(spec) {
+      var q = spec.split('|'), key = q[1], val = key === 'd' ? +q[2] : q[2];
+      if (q[0] === 'opt') {
+        var o = store.tool && st.opts[store.tool.type];
+        if (!o) return;
+        o[key] = val;
+        if (key === 'sec' && !secIsRect(val)) o.wide = null;
+        return renderPanel();
+      }
+      var id = store.sel;
+      store.edit(function (n) {
+        var x = D.find(n, id);
+        if (key === 'sec') { if (val === '4040') delete x.sec; else x.sec = val; if (!secIsRect(val)) delete x.wide; if (x.cube) x.len = D.SECS[val].h[0] * 2; }
+        else if ((key === 'd' && x.type === 'wheel' && val === 12) || (key === 'model' && val === 'my1016')) delete x[key];
+        else x[key] = val;
+      });
+    }
     function act(a) {
       var id = store.sel, p = D.find(store.d, id);
       if (!p) return;
@@ -449,7 +508,12 @@
       if (a === 'delNo') { st.confirmDel = false; return renderInspector(); }
       if (a === 'delAll') { remember(store.d); var n = D.clone(store.d); D.remove(n, id); return setDesign(n, null, null); }
       if (a === 'dup') {
-        if (p.type === 'profile') st.opts.profile = { ax: p.ax, len: p.len };
+        if (p.type === 'profile' && p.cube) { st.opts.cube = { sec: D.secOf(p) }; return setTool('cube'); }
+        if (p.type === 'profile') st.opts.profile = { ax: p.ax, len: p.len, sec: D.secOf(p), wide: p.wide || null };
+        if (p.type === 'wheel') st.opts.wheel = { d: p.d || 12 };
+        if (p.type === 'motor') st.opts.motor = { model: p.model || 'my1016' };
+        if (p.type === 'caster') st.opts.caster = { d: p.d || 100 };
+        if (p.type === 'plate') st.opts.plate = { la: p.la, lt: p.lt };
         if (p.type === 'shaft') st.opts.shaft = { len: p.len };
         if (p.type === 'sprocket') st.opts.sprocket = { n: p.n };
         if (p.type === 'deck') st.opts.deck = { lx: p.lx, lz: p.lz, crates: p.crates };
@@ -501,6 +565,7 @@
       else if ((v = b.getAttribute('data-cam'))) { if (view) { if (v === 'home') view.setView('iso'); else view.zoom(v === 'in' ? 0.8 : 1.25); } }
       else if (b.id === 'rf-drawer-close') { st.tab = null; renderBar(); renderPanel(); }
       else if ((v = b.getAttribute('data-ax'))) { st.opts.profile.ax = v; renderPanel(); }
+      else if ((v = b.getAttribute('data-pick'))) pick(v);
       else if ((v = b.getAttribute('data-rot'))) store.rotate(+v, e.shiftKey ? -1 : 1);
       else if ((v = b.getAttribute('data-face'))) store.edit(function (n) { D.find(n, store.sel).on.f = v; });
       else if ((v = b.getAttribute('data-act'))) act(v);
